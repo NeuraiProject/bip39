@@ -3174,6 +3174,13 @@
             },
         },
         {
+            name: "XNA - Neurai",
+            onSelect: function() {
+                network = libs.bitcoin.networks.neurai;
+                setHdCoin(0);
+            },
+        },
+        {
             name: "NRO - Neurocoin",
             onSelect: function() {
                 network = libs.bitcoin.networks.neurocoin;

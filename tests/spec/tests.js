@@ -1538,6 +1538,16 @@ it('Allows selection of Nix', function(done) {
     };
     testNetwork(done, params);
 });
+it('Allows selection of Neurai', function(done) {
+    var params = {
+        selectText: "XNA - Neurai",
+        phrase: "abandon abandon ability",
+        firstAddress: "NYd1gZv9p5TQkYbkUZpdNAJwTDmh9dgScQ",
+        firstPubKey: "033f5aed5f6cfbafaf223188095b5980814897295f723815fea5d3f4b648d0d0b3",
+        firstPrivKey: "Trq2nzvBXtrPDqT74LgoBZrGpMwiGE1cqQsQMDynyNx8DRM8y6Ko",
+    };
+    testNetwork(done, params);
+});
 it('Allows selection of Neurocoin', function(done) {
     var params = {
         selectText: "NRO - Neurocoin",
