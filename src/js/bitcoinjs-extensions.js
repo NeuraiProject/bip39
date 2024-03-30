@@ -1921,3 +1921,14 @@ libs.bitcoin.networks.neurai = {
   scriptHash: 0x75,
   wif: 0xb5,
 };
+
+libs.bitcoin.networks.neuraihw = {
+  messagePrefix: '\x18Neurai Signed Message:\n',
+  bip32: {
+    public: 0x0488B21E,
+    private: 0x0488ADE4,
+  },
+  pubKeyHash: 0x35,
+  scriptHash: 0x75,
+  wif: 0xb5,
+};
