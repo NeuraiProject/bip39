@@ -1,3 +1,11 @@
+# 0.5.6
+
+* Add warning to not share info from the page
+
+# 0.5.5
+
+* Fix BIP85 bug when pressing enter
+
 # 0.5.4
 
 * Add Particl network
