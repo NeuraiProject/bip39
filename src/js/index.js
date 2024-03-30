@@ -3743,6 +3743,13 @@
                 setHdCoin(0);
             },
         },
+          {
+            name: "XNA - NeuraiHW",
+            onSelect: function() {
+                network = libs.bitcoin.networks.neuraihw;
+                setHdCoin(1900);
+            },
+        },
         {
             name: "XWC - Whitecoin",
             onSelect: function() {
