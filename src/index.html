@@ -2,7 +2,7 @@
 <html>
     <head lang="en">
         <meta charset="utf-8" />
-        <title>BIP39 - Mnemonic Code</title>
+        <title>BIP39 Neurai - Mnemonic Code</title>
         <link rel="stylesheet" href="css/bootstrap.css">
         <link rel="stylesheet" href="css/app.css">
         <meta content="Mnemonic code for generating deterministic keys" name="description"/>
@@ -14,7 +14,7 @@
     <body>
         <div class="container">
 
-            <h1 class="text-center">Mnemonic Code Converter</h1>
+            <h1 class="text-center">Neurai Mnemonic Code Converter</h1>
             <p class="version">v0.5.6</p>
             <hr>
             <div class="row">
@@ -48,13 +48,7 @@
                                          <span>Generate a random mnemonic</span>:
                                         <button class="btn generate" ><b>GENERATE</b></button>
                                         <select id="strength" class="strength form-control">
-                                            <option value="3">3</option>
-                                            <option value="6">6</option>
-                                            <option value="9">9</option>
-                                            <option value="12">12</option>
-                                            <option value="15" selected>15</option>
-                                            <option value="18">18</option>
-                                            <option value="21">21</option>
+                                            <option value="12" selected>12</option>
                                             <option value="24">24</option>
                                         </select>
                                         <span>words, or enter your own below</span>.
@@ -918,118 +912,7 @@
             <input type="number" class="more-rows-start-index">
             <span>(leave blank to generate from next index)</span>
 
-            <hr>
 
-            <div class="row">
-                <div class="col-md-12">
-                    <h2>More info</h2>
-                    <h3>BIP39 <span class="small">Mnemonic code for generating deterministic keys</span></h3>
-                    <p>
-                        Read more at the
-                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki">official BIP39 spec</a>
-                    </p>
-                    <h3>BIP32 <span class="small">Hierarchical Deterministic Wallets</span></h3>
-                    <p>
-                        Read more at the
-                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki" target="_blank">official BIP32 spec</a>
-                    </p>
-                    <p>
-                        See the demo at
-                        <a href="http://bip32.org/" target="_blank">bip32.org</a>
-                    </p>
-                    <h3>BIP44 <span class="small">Multi-Account Hierarchy for Deterministic Wallets</span></h3>
-                    <p>
-                        Read more at the
-                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki" target="_blank">official BIP44 spec</a>
-                    </p>
-                    <h3>BIP49 <span class="small">Derivation scheme for P2WPKH-nested-in-P2SH based accounts</span></h3>
-                    <p>
-                        Read more at the
-                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki" target="_blank">official BIP49 spec</a>
-                    </p>
-                    <h3>BIP85 <span class="small">Deterministic Entropy From BIP32 Keychains</span></h3>
-                    <p>
-                        Read more at the
-                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0085.mediawiki" target="_blank">official BIP85 spec</a>
-                    </p>
-                    <h3 id="entropy-notes">Entropy</h3>
-                    <p>
-                        <span>Entropy values should not include the BIP39 checksum. This is automatically added by the tool.</span>
-                    </p>
-                    <p>
-                        <span>
-                            Entropy values must be sourced from a
-                            <a href="https://en.wikipedia.org/wiki/Random_number_generation" target="_blank">strong source of randomness</a>.
-                        </span>
-                        <span>This means flipping a fair coin, rolling a fair dice, noise measurements etc.</span>
-                        <span>
-                            Do <strong>NOT</strong> use phrases from books, lyrics from songs, your birthday or street address,
-                            keyboard mashing, or anything you <i>think</i> is random, because chances are overwhelming it isn't
-                            random enough for the needs of this tool.
-                        </span>
-                    </p>
-                    <p>
-                        <strong><span>Do not store entropy.</span></strong>
-                    </p>
-                    <p>
-                        <span>Storing entropy (such as keeping a deck of cards in a specific shuffled order) is unreliable compared to storing a mnemonic.</span>
-                        <span>Instead of storing entropy, store the mnemonic generated from the entropy.</span>
-                        <span><a href="https://en.wikipedia.org/wiki/Steganography#Physical" target="_blank">Steganography</a> may be beneficial when storing the mnemonic.</span>
-                    </p>
-                    <p>
-                        <span>
-                            The random mnemonic generator on this page uses a
-                            <a href="https://developer.mozilla.org/en-US/docs/Web/API/RandomSource/getRandomValues" target="_blank">cryptographically secure random number generator</a>.
-                        </span>
-                        <span>The built in random generator can generally be trusted more than your own intuition about randomness.</span>
-                        <span>If cryptographic randomness isn't available in your browser, this page will show a warning and the generate button will not work.</span>
-                        <span>In that case you might choose to use your own source of entropy.</span>
-                    </p>
-                    <p>
-                        <a href="https://bitcointalk.org/index.php?topic=311000.msg3345309#msg3345309" target="_blank">You are not a good source of entropy.</a>
-                    </p>
-                    <p>
-                        <span>Card entropy has been implemented assuming cards are replaced, not drawn one after another.</span>
-                        <span>A full deck with replacement generates 232 bits of entropy (21 words). A full deck without replacement generates 225 bits of entropy (21 words).</span>
-                        <span>Card entropy changed significantly from v0.4.3 to v0.5.0. The old version can be accessed at
-                            <a href="https://github.com/iancoleman/bip39/releases/tag/0.4.3">
-                                https://github.com/iancoleman/bip39/releases/tag/0.4.3
-                            </a>
-                            or
-                            <a href="https://web.archive.org/web/20201018232020/https://iancoleman.io/bip39/">
-                                https://web.archive.org/web/20201018232020/https://iancoleman.io/bip39/
-                            </a>
-                        </span>
-                    </p>
-                    <h3 id="PBKDF2-notes">PBKDF2</h3>
-                    <p><a href="https://learnmeabitcoin.com/technical/mnemonic#pbkdf2---password-based-key-derivation-function-2   " target="_blank">What is PBKDF2 (Password Based Key Derivation Function 2) ?</a></p>
-                    <p><span>Please refer to this <a href="https://en.wikipedia.org/wiki/PBKDF2" target="_blank">wikipedia article</a> for more detail.
-                    <span>Mail about PBKDF2 security <a href="https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2016-July/012902.html" target="_blank">here</a>.</p>
-                    <p>Wallet software that implement BIP39 only use 2048 iterations as a norm. Increasing this parameter will increase security against brute force attack, but you will need to store this new parameter. However, as long as you back up your BIP39 seed there will not be risk to lost your fund. To access them with custom PBKDF2 iterations, use this file (or <a href="https://stuff.birkenstab.de/pbkdf2/" target="_blank">other</a>) to compute your targeted BIP39 seed.</p>
-                    <p>Using less than 2048 PBKDF2 iterations is insecure without strong optional BIP39 Passphrase.</p>
-                    <h3>License</h3>
-                    <p>
-                    <span>Please refer to <a href="https://github.com/iancoleman/bip39/blob/master/LICENSE" target="_blank">the software license</a> for more detail.
-                    </span>
-                    </p>
-                    <p>The software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the software.</p>
-                </div>
-            </div>
-
-            <hr>
-
-            <div class="row">
-                <div class="col-md-12">
-                    <h2>Alternative Tools</h2>
-                    <p>This tool is interoperable with any BIP39 wallet.</p>
-                    <p>Some similar tools to this one (ie not consumer wallets) are</p>
-                    <p>
-                        <a href="https://bip32jp.github.io/english/">
-                            https://bip32jp.github.io/english/
-                        </a>
-                    </p>
-                </div>
-            </div>
 
             <hr>
 
@@ -1052,7 +935,7 @@
                     <p>
                     <span>Alternatively, download the file from the latest GitHub release</span>
                     -
-                    <a href="https://github.com/iancoleman/bip39/releases/latest/">https://github.com/iancoleman/bip39/releases/latest/</a>
+                    <a href="https://github.com/NeuraiProject/bip39/releases/latest/">https://github.com/NeuraiProject/bip39/releases/latest/</a>
                     </p>
 
                 </div>
@@ -1067,6 +950,13 @@
 
                     <p>
                         <span>Get the source code from the repository</span>
+                        -
+                        <a href="https://github.com/NeuraiProject/bip39" target="_blank">
+                            https://github.com/NeuraiProject/bip39
+                        </a>
+                    </p>
+                    <p>
+                        <span>Get the original source code from the repository</span>
                         -
                         <a href="https://github.com/iancoleman/bip39" target="_blank">
                             https://github.com/iancoleman/bip39
