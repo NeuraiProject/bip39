@@ -4,7 +4,7 @@ A tool for converting BIP39 mnemonic phrases to addresses and private keys.
 
 ## Online Version
 
-https://neurai.org/bip39/
+https://bip39.neurai.org
 
 ## Standalone offline version
 

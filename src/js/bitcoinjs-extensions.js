@@ -1208,17 +1208,6 @@ libs.bitcoin.networks.putincoin = {
   wif: 0xb7,
 };
 
-libs.bitcoin.networks.ravencoin = {
-  messagePrefix: '\x16Raven Signed Message:\n',
-  bip32: {
-    public: 0x0488B21E,
-    private: 0x0488ADE4,
-  },
-  pubKeyHash: 0x3c,
-  scriptHash: 0x7a,
-  wif: 0x80,
-};
-
 libs.bitcoin.networks.reddcoin = {
   messagePrefix: '\x18Reddcoin Signed Message:\n',
   bip32: {
@@ -1919,10 +1908,10 @@ libs.bitcoin.networks.neurai = {
   },
   pubKeyHash: 0x35,
   scriptHash: 0x75,
-  wif: 0xb5,
+  wif: 0x80,
 };
 
-libs.bitcoin.networks.neuraihw = {
+libs.bitcoin.networks.neurai_legacy = {
   messagePrefix: '\x18Neurai Signed Message:\n',
   bip32: {
     public: 0x0488B21E,
@@ -1930,5 +1919,16 @@ libs.bitcoin.networks.neuraihw = {
   },
   pubKeyHash: 0x35,
   scriptHash: 0x75,
-  wif: 0xb5,
+  wif: 0x80,
+};
+
+libs.bitcoin.networks.neurai_testnet = {
+  messagePrefix: '\x18Neurai Signed Message:\n',
+  bip32: {
+    public: 0x04358394,
+    private: 0x043587cf,
+  },
+  pubKeyHash: 0x7f,
+  scriptHash: 0x75,
+  wif: 0x80,
 };

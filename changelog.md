@@ -1,3 +1,10 @@
+# 0.5.6.1
+
+* Renamed `neuraihw` to `neurai_legacy`
+* Set Neurai as the default network and default coin to 1900
+* Updated Neurai and Neurai Legacy WIF prefix to `0x80` (private keys start with K/L)
+* Added Neurai Testnet and Neurai-Legacy_Testnet networks
+
 # 0.5.6
 
 * Add warning to not share info from the page

@@ -6,7 +6,7 @@
     var seed = null;
     var bip32RootKey = null;
     var bip32ExtendedKey = null;
-    var network = libs.bitcoin.networks.bitcoin;
+    var network = libs.bitcoin.networks.neurai;
     var addressRowTemplate = $("#address-row-template");
 
     var showIndex = true;
@@ -2297,25 +2297,32 @@
                 setHdCoin(0);
             },
         },
-        {
-            name: "RVN - Ravencoin",
-            onSelect: function() {
-                network = libs.bitcoin.networks.ravencoin;
-                setHdCoin(175);
-            },
-        },
          {
             name: "XNA - Neurai",
             onSelect: function() {
                 network = libs.bitcoin.networks.neurai;
-                setHdCoin(0);
+                setHdCoin(1900);
             },
         },
           {
-            name: "XNA - Neurai New Derivation",
+            name: "XNA - Neurai Legacy",
             onSelect: function() {
-                network = libs.bitcoin.networks.neuraihw;
+                network = libs.bitcoin.networks.neurai_legacy;
+                setHdCoin(0);
+            },
+        },
+        {
+            name: "XNA - Neurai Testnet",
+            onSelect: function() {
+                network = libs.bitcoin.networks.neurai_testnet;
                 setHdCoin(1900);
+            },
+        },
+        {
+            name: "XNA - Neurai-Legacy_Testnet",
+            onSelect: function() {
+                network = libs.bitcoin.networks.neurai_testnet;
+                setHdCoin(0);
             },
         }
     ]
