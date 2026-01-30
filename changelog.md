@@ -1,3 +1,11 @@
+# 0.5.6.2
+
+* Implemented a new test script (test-derivation.mjs) to compare BIP39 seed generation, HD key derivation, and ML-DSA-44 key generation.
+* Added functionality for Bech32m encoding of the derived public key.
+* Created a verification script (verify_pq.js) to generate a Dilithium keypair and validate the address format.
+* Included utility functions for hashing and bit conversion in both scripts.
+
+
 # 0.5.6.1
 
 * Renamed `neuraihw` to `neurai_legacy`
