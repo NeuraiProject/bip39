@@ -1922,6 +1922,30 @@ libs.bitcoin.networks.neurai_legacy = {
   wif: 0x80,
 };
 
+libs.bitcoin.networks.neurai_pq = {
+  messagePrefix: '\x18Neurai PQ Signed Message:\n',
+  bip32: {
+    public: 0x0488B21E,
+    private: 0x0488ADE4,
+  },
+  pubKeyHash: 0x35,
+  scriptHash: 0x75,
+  wif: 0x80,
+  bech32: 'nq',
+};
+
+libs.bitcoin.networks.neurai_pq_testnet = {
+  messagePrefix: '\x18Neurai PQ Signed Message:\n',
+  bip32: {
+    public: 0x04358394,
+    private: 0x043587cf,
+  },
+  pubKeyHash: 0x7f,
+  scriptHash: 0x75,
+  wif: 0x80,
+  bech32: 'tnq',
+};
+
 libs.bitcoin.networks.neurai_testnet = {
   messagePrefix: '\x18Neurai Signed Message:\n',
   bip32: {

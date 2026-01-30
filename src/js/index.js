@@ -1,4 +1,4 @@
-(function() {
+(function () {
 
     // mnemonics is populated as required by getLanguage
     var mnemonics = { "english": new Mnemonic("english") };
@@ -70,9 +70,18 @@
     DOM.bip84tab = $("#bip84-tab");
     DOM.bip141tab = $("#bip141-tab");
     DOM.bip32panel = $("#bip32");
+    DOM.bip100panel = $("#bip100");
     DOM.bip44panel = $("#bip44");
     DOM.bip49panel = $("#bip49");
     DOM.bip32path = $("#bip32-path");
+    DOM.bip100tab = $("#bip100-tab a");
+    DOM.bip100path = $("#bip100-path");
+    DOM.bip100purpose = $("#bip100 .purpose");
+    DOM.bip100coin = $("#bip100 .coin");
+    DOM.bip100account = $("#bip100 .account");
+    DOM.bip100accountXprv = $("#bip100 .account-xprv");
+    DOM.bip100accountXpub = $("#bip100 .account-xpub");
+    DOM.bip100change = $("#bip100 .change");
     DOM.bip44path = $("#bip44-path");
     DOM.bip44purpose = $("#bip44 .purpose");
     DOM.bip44coin = $("#bip44 .coin");
@@ -214,6 +223,9 @@
         DOM.bitcoinCashAddressTypeContainer.addClass("hidden");
         var networkIndex = e.target.value;
         var network = networks[networkIndex];
+        // Reset tabs visibility based on network type
+        var isPQNetwork = network.name.indexOf("PostQuantum") > -1;
+        setPQMode(isPQNetwork);
         network.onSelect();
         adjustNetworkForSegwit();
         if (seed != null) {
@@ -258,31 +270,31 @@
 
     function delayedPhraseChanged() {
 
-        if(isUsingAutoCompute()) {
-        hideValidationError();
-        seed = null;
-        bip32RootKey = null;
-        bip32ExtendedKey = null;
-        clearAddressesList();
-        showPending();
-        if (phraseChangeTimeoutEvent != null) {
-            clearTimeout(phraseChangeTimeoutEvent);
-        }
-        phraseChangeTimeoutEvent = setTimeout(function() {
-            phraseChanged();
-            var entropy = mnemonic.toRawEntropyHex(DOM.phrase.val());
-            if (entropy !== null) {
-                DOM.entropyMnemonicLength.val("raw");
-                DOM.entropy.val(entropy);
-                DOM.entropyTypeInputs.filter("[value='hexadecimal']").prop("checked", true);
-                entropyTypeAutoDetect = false;
+        if (isUsingAutoCompute()) {
+            hideValidationError();
+            seed = null;
+            bip32RootKey = null;
+            bip32ExtendedKey = null;
+            clearAddressesList();
+            showPending();
+            if (phraseChangeTimeoutEvent != null) {
+                clearTimeout(phraseChangeTimeoutEvent);
             }
-        }, 400);
-    } else {
-        clearDisplay();
-        clearEntropyFeedback();
-        showValidationError("Auto compute is disabled");
-    }
+            phraseChangeTimeoutEvent = setTimeout(function () {
+                phraseChanged();
+                var entropy = mnemonic.toRawEntropyHex(DOM.phrase.val());
+                if (entropy !== null) {
+                    DOM.entropyMnemonicLength.val("raw");
+                    DOM.entropy.val(entropy);
+                    DOM.entropyTypeInputs.filter("[value='hexadecimal']").prop("checked", true);
+                    entropyTypeAutoDetect = false;
+                }
+            }, 400);
+        } else {
+            clearDisplay();
+            clearEntropyFeedback();
+            showValidationError("Auto compute is disabled");
+        }
     }
 
     function phraseChanged() {
@@ -322,9 +334,9 @@
             calcBip32RootKeyFromSeed(phrase, passphrase);
         }
         else if (seed != "") {
-          bip32RootKey = libs.bitcoin.HDNode.fromSeedHex(seed, network);
-          var rootKeyBase58 = bip32RootKey.toBase58();
-          DOM.rootKey.val(rootKeyBase58);
+            bip32RootKey = libs.bitcoin.HDNode.fromSeedHex(seed, network);
+            var rootKeyBase58 = bip32RootKey.toBase58();
+            DOM.rootKey.val(rootKeyBase58);
         }
         else {
             // Calculate and display for root key
@@ -501,75 +513,75 @@
     }
 
     function toggleBip85() {
-      if (DOM.showBip85.prop('checked')) {
-        DOM.bip85.removeClass('hidden');
-        calcBip85();
-      } else {
-        DOM.bip85.addClass('hidden');
-      }
+        if (DOM.showBip85.prop('checked')) {
+            DOM.bip85.removeClass('hidden');
+            calcBip85();
+        } else {
+            DOM.bip85.addClass('hidden');
+        }
     }
 
     function toggleBip85Fields() {
-      if (DOM.showBip85.prop('checked')) {
-        DOM.bip85mnemonicLanguageInput.addClass('hidden');
-        DOM.bip85mnemonicLengthInput.addClass('hidden');
-        DOM.bip85bytesInput.addClass('hidden');
+        if (DOM.showBip85.prop('checked')) {
+            DOM.bip85mnemonicLanguageInput.addClass('hidden');
+            DOM.bip85mnemonicLengthInput.addClass('hidden');
+            DOM.bip85bytesInput.addClass('hidden');
 
-        var app = DOM.bip85application.val();
-        if (app === 'bip39') {
-          DOM.bip85mnemonicLanguageInput.removeClass('hidden');
-          DOM.bip85mnemonicLengthInput.removeClass('hidden');
-        } else if (app === 'hex') {
-          DOM.bip85bytesInput.removeClass('hidden');
+            var app = DOM.bip85application.val();
+            if (app === 'bip39') {
+                DOM.bip85mnemonicLanguageInput.removeClass('hidden');
+                DOM.bip85mnemonicLengthInput.removeClass('hidden');
+            } else if (app === 'hex') {
+                DOM.bip85bytesInput.removeClass('hidden');
+            }
         }
-      }
     }
 
     function calcBip85() {
-      if (!DOM.showBip85.prop('checked')) {
-        return
-      }
-
-      toggleBip85Fields();
-
-      var app = DOM.bip85application.val();
-
-      var rootKeyBase58 = DOM.rootKey.val();
-      if (!rootKeyBase58) {
-        return;
-      }
-      try {
-        // try parsing using base network params
-        // The bip85 lib only understands xpubs, so compute it
-        var rootKey = libs.bitcoin.HDNode.fromBase58(rootKeyBase58, network);
-        rootKey.keyPair.network = libs.bitcoin.networks['bitcoin']
-        var master = libs.bip85.BIP85.fromBase58(rootKey.toBase58());
-
-        var result;
-
-        const index = parseInt(DOM.bip85index.val(), 10);
-
-        if (app === 'bip39') {
-          const language = parseInt(DOM.bip85mnemonicLanguage.val(), 10);
-          const length = parseInt(DOM.bip85mnemonicLength.val(), 10);
-
-          result = master.deriveBIP39(language, length, index).toMnemonic();
-        } else if (app === 'wif') {
-          result = master.deriveWIF(index).toWIF();
-        } else if (app === 'xprv') {
-          result = master.deriveXPRV(index).toXPRV();
-        } else if (app === 'hex') {
-          const bytes = parseInt(DOM.bip85bytes.val(), 10);
-
-          result = master.deriveHex(bytes, index).toEntropy();
+        if (!DOM.showBip85.prop('checked')) {
+            return
         }
 
-        hideValidationError();
-        DOM.bip85Field.val(result);
-      } catch (e) {
-        showValidationError('BIP85: ' + e.message);
-        DOM.bip85Field.val('');
-      }
+        toggleBip85Fields();
+
+        var app = DOM.bip85application.val();
+
+        var rootKeyBase58 = DOM.rootKey.val();
+        if (!rootKeyBase58) {
+            return;
+        }
+        try {
+            // try parsing using base network params
+            // The bip85 lib only understands xpubs, so compute it
+            var rootKey = libs.bitcoin.HDNode.fromBase58(rootKeyBase58, network);
+            rootKey.keyPair.network = libs.bitcoin.networks['bitcoin']
+            var master = libs.bip85.BIP85.fromBase58(rootKey.toBase58());
+
+            var result;
+
+            const index = parseInt(DOM.bip85index.val(), 10);
+
+            if (app === 'bip39') {
+                const language = parseInt(DOM.bip85mnemonicLanguage.val(), 10);
+                const length = parseInt(DOM.bip85mnemonicLength.val(), 10);
+
+                result = master.deriveBIP39(language, length, index).toMnemonic();
+            } else if (app === 'wif') {
+                result = master.deriveWIF(index).toWIF();
+            } else if (app === 'xprv') {
+                result = master.deriveXPRV(index).toXPRV();
+            } else if (app === 'hex') {
+                const bytes = parseInt(DOM.bip85bytes.val(), 10);
+
+                result = master.deriveHex(bytes, index).toEntropy();
+            }
+
+            hideValidationError();
+            DOM.bip85Field.val(result);
+        } catch (e) {
+            showValidationError('BIP85: ' + e.message);
+            DOM.bip85Field.val('');
+        }
     }
 
     function calcForDerivationPath() {
@@ -617,7 +629,7 @@
         }
         clearDisplay();
         showPending();
-        setTimeout(function() {
+        setTimeout(function () {
             setMnemonicLanguage();
             var phrase = generateRandomPhrase();
             if (!phrase) {
@@ -628,7 +640,7 @@
     }
 
     function languageChanged() {
-        setTimeout(function() {
+        setTimeout(function () {
             setMnemonicLanguage();
             if (DOM.phrase.val().length > 0) {
                 var newPhrase = convertPhraseToNewLanguage();
@@ -704,13 +716,13 @@
     function calcBip32RootKeyFromSeed(phrase, passphrase) {
         seed = mnemonic.toSeed(phrase, passphrase);
         bip32RootKey = libs.bitcoin.HDNode.fromSeedHex(seed, network);
-        if(isGRS())
+        if (isGRS())
             bip32RootKey = libs.groestlcoinjs.HDNode.fromSeedHex(seed, network);
 
     }
 
     function calcBip32RootKeyFromBase58(rootKeyBase58) {
-        if(isGRS()) {
+        if (isGRS()) {
             calcBip32RootKeyFromBase58GRS(rootKeyBase58);
             return;
         }
@@ -726,14 +738,14 @@
                 bip32RootKey = libs.bitcoin.HDNode.fromBase58(rootKeyBase58, n);
                 return;
             }
-            catch (e) {}
+            catch (e) { }
             // try parsing using p2wpkh params
             if ("p2wpkh" in n) {
                 try {
                     bip32RootKey = libs.bitcoin.HDNode.fromBase58(rootKeyBase58, n.p2wpkh);
                     return;
                 }
-                catch (e) {}
+                catch (e) { }
             }
             // try parsing using p2wpkh-in-p2sh network params
             if ("p2wpkhInP2sh" in n) {
@@ -741,7 +753,7 @@
                     bip32RootKey = libs.bitcoin.HDNode.fromBase58(rootKeyBase58, n.p2wpkhInP2sh);
                     return;
                 }
-                catch (e) {}
+                catch (e) { }
             }
             // try parsing using p2wsh network params
             if ("p2wsh" in n) {
@@ -749,7 +761,7 @@
                     bip32RootKey = libs.bitcoin.HDNode.fromBase58(rootKeyBase58, n.p2wsh);
                     return;
                 }
-                catch (e) {}
+                catch (e) { }
             }
             // try parsing using p2wsh-in-p2sh network params
             if ("p2wshInP2sh" in n) {
@@ -757,7 +769,7 @@
                     bip32RootKey = libs.bitcoin.HDNode.fromBase58(rootKeyBase58, n.p2wshInP2sh);
                     return;
                 }
-                catch (e) {}
+                catch (e) { }
             }
         }
         // try the network params as currently specified
@@ -777,14 +789,14 @@
                 bip32RootKey = libs.groestlcoinjs.HDNode.fromBase58(rootKeyBase58, n);
                 return;
             }
-            catch (e) {}
+            catch (e) { }
             // try parsing using p2wpkh params
             if ("p2wpkh" in n) {
                 try {
                     bip32RootKey = libs.groestlcoinjs.HDNode.fromBase58(rootKeyBase58, n.p2wpkh);
                     return;
                 }
-                catch (e) {}
+                catch (e) { }
             }
             // try parsing using p2wpkh-in-p2sh network params
             if ("p2wpkhInP2sh" in n) {
@@ -792,7 +804,7 @@
                     bip32RootKey = libs.groestlcoinjs.HDNode.fromBase58(rootKeyBase58, n.p2wpkhInP2sh);
                     return;
                 }
-                catch (e) {}
+                catch (e) { }
             }
         }
         // try the network params as currently specified
@@ -807,13 +819,13 @@
         var extendedKey = bip32RootKey;
         // Derive the key from the path
         var pathBits = path.split("/");
-        for (var i=0; i<pathBits.length; i++) {
+        for (var i = 0; i < pathBits.length; i++) {
             var bit = pathBits[i];
             var index = parseInt(bit);
             if (isNaN(index)) {
                 continue;
             }
-            var hardened = bit[bit.length-1] == "'";
+            var hardened = bit[bit.length - 1] == "'";
             var isPriv = !(extendedKey.isNeutered());
             var invalidDerivationPath = hardened && !isPriv;
             if (invalidDerivationPath) {
@@ -850,7 +862,7 @@
             return "Blank mnemonic";
         }
         // Check each word
-        for (var i=0; i<words.length; i++) {
+        for (var i = 0; i < words.length; i++) {
             var word = words[i];
             var language = getLanguage();
             if (WORDLISTS[language].indexOf(word) == -1) {
@@ -869,7 +881,7 @@
     }
 
     function validateRootKey(rootKeyBase58) {
-        if(isGRS())
+        if (isGRS())
             return validateRootKeyGRS(rootKeyBase58);
 
         // try various segwit network params since this extended key may be from
@@ -884,14 +896,14 @@
                 libs.bitcoin.HDNode.fromBase58(rootKeyBase58, n);
                 return "";
             }
-            catch (e) {}
+            catch (e) { }
             // try parsing using p2wpkh params
             if ("p2wpkh" in n) {
                 try {
                     libs.bitcoin.HDNode.fromBase58(rootKeyBase58, n.p2wpkh);
                     return "";
                 }
-                catch (e) {}
+                catch (e) { }
             }
             // try parsing using p2wpkh-in-p2sh network params
             if ("p2wpkhInP2sh" in n) {
@@ -899,7 +911,7 @@
                     libs.bitcoin.HDNode.fromBase58(rootKeyBase58, n.p2wpkhInP2sh);
                     return "";
                 }
-                catch (e) {}
+                catch (e) { }
             }
             // try parsing using p2wsh network params
             if ("p2wsh" in n) {
@@ -907,7 +919,7 @@
                     libs.bitcoin.HDNode.fromBase58(rootKeyBase58, n.p2wsh);
                     return "";
                 }
-                catch (e) {}
+                catch (e) { }
             }
             // try parsing using p2wsh-in-p2sh network params
             if ("p2wshInP2sh" in n) {
@@ -915,7 +927,7 @@
                     libs.bitcoin.HDNode.fromBase58(rootKeyBase58, n.p2wshInP2sh);
                     return "";
                 }
-                catch (e) {}
+                catch (e) { }
             }
         }
         // try the network params as currently specified
@@ -941,14 +953,14 @@
                 libs.groestlcoinjs.HDNode.fromBase58(rootKeyBase58, n);
                 return "";
             }
-            catch (e) {}
+            catch (e) { }
             // try parsing using p2wpkh params
             if ("p2wpkh" in n) {
                 try {
                     libs.groestlcoinjs.HDNode.fromBase58(rootKeyBase58, n.p2wpkh);
                     return "";
                 }
-                catch (e) {}
+                catch (e) { }
             }
             // try parsing using p2wpkh-in-p2sh network params
             if ("p2wpkhInP2sh" in n) {
@@ -956,7 +968,7 @@
                     libs.groestlcoinjs.HDNode.fromBase58(rootKeyBase58, n.p2wpkhInP2sh);
                     return "";
                 }
-                catch (e) {}
+                catch (e) { }
             }
         }
         // try the network params as currently specified
@@ -1015,6 +1027,21 @@
             console.log("Using derivation path from BIP84 tab: " + derivationPath);
             return derivationPath;
         }
+        else if (bip100TabSelected()) {
+            var purpose = parseIntNoNaN(DOM.bip100purpose.val(), 100);
+            var coin = parseIntNoNaN(DOM.bip100coin.val(), 0);
+            var account = parseIntNoNaN(DOM.bip100account.val(), 0);
+            var change = parseIntNoNaN(DOM.bip100change.val(), 0);
+            var path = "m/";
+            path += purpose + "'/";
+            path += coin + "'/";
+            path += account + "'/";
+            path += change;
+            DOM.bip100path.val(path);
+            var derivationPath = DOM.bip100path.val();
+            console.log("Using derivation path from BIP100 tab: " + derivationPath);
+            return derivationPath;
+        }
         else if (bip32TabSelected()) {
             var derivationPath = DOM.bip32path.val();
             console.log("Using derivation path from BIP32 tab: " + derivationPath);
@@ -1049,7 +1076,7 @@
             if (indexes.length > maxDepth) {
                 return "Derivation depth is " + indexes.length + ", must be less than " + maxDepth;
             }
-            for (var depth = 1; depth<indexes.length; depth++) {
+            for (var depth = 1; depth < indexes.length; depth++) {
                 var index = indexes[depth];
                 var invalidChars = index.replace(/^[0-9]+'?$/g, "")
                 if (invalidChars.length > 0) {
@@ -1170,18 +1197,18 @@
     }
 
     function displayAddresses(start, total) {
-        generationProcesses.push(new (function() {
+        generationProcesses.push(new (function () {
 
             var rows = [];
 
-            this.stop = function() {
-                for (var i=0; i<rows.length; i++) {
+            this.stop = function () {
+                for (var i = 0; i < rows.length; i++) {
                     rows[i].shouldGenerate = false;
                 }
                 hidePending();
             }
 
-            for (var i=0; i<total; i++) {
+            for (var i = 0; i < total; i++) {
                 var index = i + start;
                 var isLast = i == total - 1;
                 rows.push(new TableRow(index, isLast));
@@ -1196,7 +1223,7 @@
 
     function p2wpkhSelected() {
         return bip84TabSelected() ||
-                bip141TabSelected() && DOM.bip141semantics.val() == "p2wpkh";
+            bip141TabSelected() && DOM.bip141semantics.val() == "p2wpkh";
     }
 
     function p2wpkhInP2shSelected() {
@@ -1231,7 +1258,7 @@
         }
 
         function calculateValues() {
-            setTimeout(function() {
+            setTimeout(function () {
                 if (!self.shouldGenerate) {
                     return;
                 }
@@ -1249,7 +1276,7 @@
                 var useUncompressed = useBip38;
                 if (useUncompressed) {
                     keyPair = new libs.bitcoin.ECPair(keyPair.d, null, { network: network, compressed: false });
-                    if(isGRS())
+                    if (isGRS())
                         keyPair = new libs.groestlcoinjs.ECPair(keyPair.d, null, { network: network, compressed: false });
 
                 }
@@ -1262,12 +1289,12 @@
                     privkey = keyPair.toWIF();
                     // BIP38 encode private key if required
                     if (useBip38) {
-                        if(isGRS())
-                            privkey = libs.groestlcoinjsBip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
+                        if (isGRS())
+                            privkey = libs.groestlcoinjsBip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function (p) {
                                 console.log("Progressed " + p.percent.toFixed(1) + "% for index " + index);
                             }, null, networks[DOM.network.val()].name.includes("Testnet"));
                         else
-                            privkey = libs.bip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
+                            privkey = libs.bip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function (p) {
                                 console.log("Progressed " + p.percent.toFixed(1) + "% for index " + index);
                             });
                     }
@@ -1342,8 +1369,8 @@
                     var purpose = parseIntNoNaN(DOM.bip44purpose.val(), 44);
                     var coin = parseIntNoNaN(DOM.bip44coin.val(), 0);
                     var path = "m/";
-                        path += purpose + "'/";
-                        path += coin + "'/" + index + "'";
+                    path += purpose + "'/";
+                    path += coin + "'/" + index + "'";
                     var keypair = libs.stellarUtil.getKeypair(path, seed);
                     indexText = path;
                     privkey = keypair.secret();
@@ -1391,13 +1418,91 @@
                         address = libs.bchaddr.toBitpayAddress(address);
                     }
                 }
-                 // Bitcoin Cash address format may vary
-                 if (networks[DOM.network.val()].name == "SLP - Simple Ledger Protocol") {
-                     var bchAddrType = DOM.bitcoinCashAddressType.filter(":checked").val();
-                     if (bchAddrType == "cashaddr") {
-                         address = libs.bchaddrSlp.toSlpAddress(address);
-                     }
-                 }
+                // Bitcoin Cash address format may vary
+                if (networks[DOM.network.val()].name == "SLP - Simple Ledger Protocol") {
+                    var bchAddrType = DOM.bitcoinCashAddressType.filter(":checked").val();
+                    if (bchAddrType == "cashaddr") {
+                        address = libs.bchaddrSlp.toSlpAddress(address);
+                    }
+                }
+
+                // Neurai PostQuantum (ML-DSA-44 / FIPS 204)
+                if (networks[DOM.network.val()].name.indexOf("Neurai PostQuantum") > -1) {
+                    var hrp = libs.bitcoin.networks.neurai_pq.bech32;
+                    if (networks[DOM.network.val()].name.indexOf("Testnet") > -1) {
+                        hrp = libs.bitcoin.networks.neurai_pq_testnet.bech32;
+                    }
+
+                    if (typeof ml_dsa44 !== 'undefined') {
+                        try {
+                            // Use the private key of the HD node as the deterministic seed
+                            // keyPair.d is the BigInteger private key from bitcoinjs
+                            var seedBuffer = keyPair.d.toBuffer(32);
+                            var seed = new Uint8Array(seedBuffer);
+
+                            // Generate ML-DSA-44 (FIPS 204) KeyPair from seed
+                            // noble-post-quantum uses 32-byte seed for deterministic keygen
+                            var pqKeys = ml_dsa44.keygen(seed);
+
+                            // Get Public Key (1312 bytes for ML-DSA-44)
+                            var pubKeyBytes = pqKeys.publicKey; // Uint8Array
+
+                            // Set Public Key in UI (hex format)
+                            var pubKeyHex = "";
+                            for (var i = 0; i < pubKeyBytes.length; i++) {
+                                var hex = pubKeyBytes[i].toString(16);
+                                if (hex.length < 2) hex = "0" + hex;
+                                pubKeyHex += hex;
+                            }
+                            pubkey = pubKeyHex; // Override the ECDSA public key
+
+                            // Hash160 of Public Key for Witness V1 Address
+                            // In C++, we prepend 0x05 header before hashing
+                            // So we need to do the same here for compatibility
+                            var pubKeyWithHeader = new Uint8Array(pubKeyBytes.length + 1);
+                            pubKeyWithHeader[0] = 0x05; // PQ key header
+                            pubKeyWithHeader.set(pubKeyBytes, 1);
+
+                            var SafeBuffer = seedBuffer.constructor;
+                            var pubKeyBuf;
+                            try {
+                                if (SafeBuffer.from) {
+                                    pubKeyBuf = SafeBuffer.from(pubKeyWithHeader);
+                                } else {
+                                    pubKeyBuf = new SafeBuffer(pubKeyWithHeader);
+                                }
+                            } catch (e) {
+                                console.error("Buffer creation failed", e);
+                                if (typeof Buffer !== 'undefined') pubKeyBuf = Buffer.from(pubKeyWithHeader);
+                                else pubKeyBuf = pubKeyWithHeader;
+                            }
+
+                            var hash160Buffer = libs.bitcoin.crypto.hash160(pubKeyBuf);
+
+                            // Convert buffer to array
+                            var hash160 = [];
+                            for (var i = 0; i < hash160Buffer.length; i++) hash160.push(hash160Buffer[i]);
+
+                            // Bech32m encode
+                            // First convert 8-bit hash to 5-bit
+                            var data5bit = convertBits(hash160, 8, 5, true);
+                            // Prepend witness version 1
+                            var version = [1];
+                            var data = version.concat(data5bit);
+                            address = bech32m_encode(hrp, data);
+
+                            if (hasPrivkey) {
+                                var seedHex = seedBuffer.toString('hex');
+                                privkey = "ML-DSA-44 Seed: " + seedHex;
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            address = "Error: " + e.message;
+                        }
+                    } else {
+                        address = "Error: ML-DSA-44 lib missing (noble-pq.js)";
+                    }
+                }
 
                 // ZooBC address format may vary
                 if (networks[DOM.network.val()].name == "ZBC - ZooBlockchain") {
@@ -1405,8 +1510,8 @@
                     var purpose = parseIntNoNaN(DOM.bip44purpose.val(), 44);
                     var coin = parseIntNoNaN(DOM.bip44coin.val(), 0);
                     var path = "m/";
-                        path += purpose + "'/";
-                        path += coin + "'/" + index + "'";
+                    path += purpose + "'/";
+                    path += coin + "'/" + index + "'";
                     var result = libs.zoobcUtil.getKeypair(path, seed);
 
                     let publicKey = result.pubKey.slice(1, 33);
@@ -1457,7 +1562,7 @@
                     address = libs.bitcoin.networks.crown.toNewAddress(address);
                 }
 
-              if (networks[DOM.network.val()].name == "EOS - EOSIO") {
+                if (networks[DOM.network.val()].name == "EOS - EOSIO") {
                     address = ""
                     pubkey = EOSbufferToPublic(keyPair.getPublicKeyBuffer());
                     privkey = EOSbufferToPrivate(keyPair.d.toBuffer(32));
@@ -1477,13 +1582,13 @@
                 }
 
                 if (networks[DOM.network.val()].name == "RUNE - THORChain") {
-                     const hrp = "thor";
-                     address = CosmosBufferToAddress(keyPair.getPublicKeyBuffer(), hrp);
-                     pubkey = keyPair.getPublicKeyBuffer().toString("hex");
-                     privkey = keyPair.d.toBuffer().toString("hex");
+                    const hrp = "thor";
+                    address = CosmosBufferToAddress(keyPair.getPublicKeyBuffer(), hrp);
+                    pubkey = keyPair.getPublicKeyBuffer().toString("hex");
+                    privkey = keyPair.d.toBuffer().toString("hex");
                 }
 
-                if (networks[DOM.network.val()].name == "XWC - Whitecoin"){
+                if (networks[DOM.network.val()].name == "XWC - Whitecoin") {
                     address = XWCbufferToAddress(keyPair.getPublicKeyBuffer());
                     pubkey = XWCbufferToPublic(keyPair.getPublicKeyBuffer());
                     privkey = XWCbufferToPrivate(keyPair.d.toBuffer(32));
@@ -1497,14 +1602,14 @@
                 }
 
                 if (networks[DOM.network.val()].name == "IOV - Starname") {
-                  const hrp = "star";
-                  address = CosmosBufferToAddress(keyPair.getPublicKeyBuffer(), hrp);
-                  pubkey = CosmosBufferToPublic(keyPair.getPublicKeyBuffer(), hrp);
-                  privkey = keyPair.d.toBuffer().toString("base64");
+                    const hrp = "star";
+                    address = CosmosBufferToAddress(keyPair.getPublicKeyBuffer(), hrp);
+                    pubkey = CosmosBufferToPublic(keyPair.getPublicKeyBuffer(), hrp);
+                    privkey = keyPair.d.toBuffer().toString("base64");
                 }
 
-              //Groestlcoin Addresses are different
-                if(isGRS()) {
+                //Groestlcoin Addresses are different
+                if (isGRS()) {
 
                     if (isSegwit) {
                         if (!segwitAvailable) {
@@ -1639,7 +1744,7 @@
     }
 
     function disableForms() {
-        $("form").on("submit", function(e) {
+        $("form").on("submit", function (e) {
             e.preventDefault();
         });
     }
@@ -1663,7 +1768,7 @@
         var words = WORDLISTS[language];
         var minDistance = 99;
         var closestWord = words[0];
-        for (var i=0; i<words.length; i++) {
+        for (var i = 0; i < words.length; i++) {
             var comparedTo = words[i];
             if (comparedTo.indexOf(word) == 0) {
                 return comparedTo;
@@ -1684,7 +1789,7 @@
     }
 
     function populateNetworkSelect() {
-        for (var i=0; i<networks.length; i++) {
+        for (var i = 0; i < networks.length; i++) {
             var network = networks[i];
             var option = $("<option>");
             option.attr("value", i);
@@ -1697,7 +1802,7 @@
     }
 
     function populateClientSelect() {
-        for (var i=0; i<clients.length; i++) {
+        for (var i = 0; i < clients.length; i++) {
             var client = clients[i];
             var option = $("<option>");
             option.attr("value", i);
@@ -1733,7 +1838,7 @@
             for (l in WORDLISTS) {
                 // Track how many words match in this language
                 languageMatches[l] = 0;
-                for (var i=0; i<words.length; i++) {
+                for (var i = 0; i < words.length; i++) {
                     var wordInLanguage = WORDLISTS[l].indexOf(words[i]) > -1;
                     if (wordInLanguage) {
                         languageMatches[l]++;
@@ -1791,7 +1896,7 @@
         var oldPhrase = DOM.phrase.val();
         var oldWords = phraseToWordArray(oldPhrase);
         var newWords = [];
-        for (var i=0; i<oldWords.length; i++) {
+        for (var i = 0; i < oldWords.length; i++) {
             var oldWord = oldWords[i];
             var index = WORDLISTS[oldLanguage].indexOf(oldWord);
             var newWord = WORDLISTS[newLanguage][index];
@@ -1805,7 +1910,7 @@
     function phraseToWordArray(phrase) {
         var words = phrase.split(/\s/g);
         var noBlanks = [];
-        for (var i=0; i<words.length; i++) {
+        for (var i = 0; i < words.length; i++) {
             var word = words[i];
             if (word.length > 0) {
                 noBlanks.push(word);
@@ -1826,40 +1931,40 @@
 
     function writeSplitPhrase(phrase) {
         var wordCount = phrase.split(/\s/g).length;
-        var left=[];
-        for (var i=0;i<wordCount;i++) left.push(i);
-        var group=[[],[],[]],
-            groupI=-1;
-        var seed = Math.abs(sjcl.hash.sha256.hash(phrase)[0])% 2147483647;
-        while (left.length>0) {
-            groupI=(groupI+1)%3;
+        var left = [];
+        for (var i = 0; i < wordCount; i++) left.push(i);
+        var group = [[], [], []],
+            groupI = -1;
+        var seed = Math.abs(sjcl.hash.sha256.hash(phrase)[0]) % 2147483647;
+        while (left.length > 0) {
+            groupI = (groupI + 1) % 3;
             seed = seed * 16807 % 2147483647;
-            var selected=Math.floor(left.length*(seed - 1) / 2147483646);
+            var selected = Math.floor(left.length * (seed - 1) / 2147483646);
             group[groupI].push(left[selected]);
-            left.splice(selected,1);
+            left.splice(selected, 1);
         }
-        var cards=[phrase.split(/\s/g),phrase.split(/\s/g),phrase.split(/\s/g)];
-        for (var i=0;i<3;i++) {
-            for (var ii=0;ii<wordCount/3;ii++) cards[i][group[i][ii]]='XXXX';
-            cards[i]='Card '+(i+1)+': '+wordArrayToPhrase(cards[i]);
+        var cards = [phrase.split(/\s/g), phrase.split(/\s/g), phrase.split(/\s/g)];
+        for (var i = 0; i < 3; i++) {
+            for (var ii = 0; ii < wordCount / 3; ii++) cards[i][group[i][ii]] = 'XXXX';
+            cards[i] = 'Card ' + (i + 1) + ': ' + wordArrayToPhrase(cards[i]);
         }
         DOM.phraseSplit.val(cards.join("\r\n"));
-        var triesPerSecond=10000000000;
-        var hackTime=Math.pow(2,wordCount*10/3)/triesPerSecond;
+        var triesPerSecond = 10000000000;
+        var hackTime = Math.pow(2, wordCount * 10 / 3) / triesPerSecond;
         var displayRedText = false;
-        if (hackTime<1) {
-            hackTime="<1 second";
+        if (hackTime < 1) {
+            hackTime = "<1 second";
             displayRedText = true;
-        } else if (hackTime<86400) {
-            hackTime=Math.floor(hackTime)+" seconds";
+        } else if (hackTime < 86400) {
+            hackTime = Math.floor(hackTime) + " seconds";
             displayRedText = true;
-        } else if(hackTime<31557600) {
-            hackTime=Math.floor(hackTime/86400)+" days";
+        } else if (hackTime < 31557600) {
+            hackTime = Math.floor(hackTime / 86400) + " days";
             displayRedText = true;
         } else {
-            hackTime=Math.floor(hackTime/31557600)+" years";
+            hackTime = Math.floor(hackTime / 31557600) + " years";
         }
-        DOM.phraseSplitWarn.html("Time to hack with only one card: "+hackTime);
+        DOM.phraseSplitWarn.html("Time to hack with only one card: " + hackTime);
         if (displayRedText) {
             DOM.phraseSplitWarn.addClass("text-danger");
         } else {
@@ -1922,8 +2027,8 @@
         var binaryStr = bits.substring(start);
         // Convert entropy string to numeric array
         var entropyArr = [];
-        for (var i=0; i<binaryStr.length / 8; i++) {
-            var byteAsBits = binaryStr.substring(i*8, i*8+8);
+        for (var i = 0; i < binaryStr.length / 8; i++) {
+            var byteAsBits = binaryStr.substring(i * 8, i * 8 + 8);
             var entropyByte = parseInt(byteAsBits, 2);
             entropyArr.push(entropyByte)
         }
@@ -1997,7 +2102,7 @@
             // Detect duplicates
             var dupes = [];
             var dupeTracker = {};
-            for (var i=0; i<entropy.base.events.length; i++) {
+            for (var i = 0; i < entropy.base.events.length; i++) {
                 var card = entropy.base.events[i];
                 var cardUpper = card.toUpperCase();
                 if (cardUpper in dupeTracker) {
@@ -2010,7 +2115,7 @@
                 if (dupes.length == 1) {
                     dupeWord = "duplicate";
                 }
-                var msg = dupes.length + " " + dupeWord + ": " + dupes.slice(0,3).join(" ");
+                var msg = dupes.length + " " + dupeWord + ": " + dupes.slice(0, 3).join(" ");
                 if (dupes.length > 3) {
                     msg += "...";
                 }
@@ -2028,8 +2133,8 @@
             var values = "A23456789TJQK";
             var suits = "CDHS";
             var missingCards = [];
-            for (var i=0; i<suits.length; i++) {
-                for (var j=0; j<values.length; j++) {
+            for (var i = 0; i < suits.length; i++) {
+                for (var j = 0; j < values.length; j++) {
                     var card = values[j] + suits[i];
                     if (!(card in dupeTracker)) {
                         missingCards.push(card);
@@ -2038,7 +2143,7 @@
             }
             // Display missing cards if six or less, ie clearly going for full deck
             if (missingCards.length > 0 && missingCards.length <= 6) {
-                var msg = missingCards.length + " missing: " + missingCards.slice(0,3).join(" ");
+                var msg = missingCards.length + " missing: " + missingCards.slice(0, 3).join(" ");
                 if (missingCards.length > 3) {
                     msg += "...";
                 }
@@ -2100,21 +2205,21 @@
     function networkIsEthereum() {
         var name = networks[DOM.network.val()].name;
         return (name == "ETH - Ethereum")
-                    || (name == "ETC - Ethereum Classic")
-                    || (name == "EWT - EnergyWeb")
-                    || (name == "PIRL - Pirl")
-                    || (name == "MIX - MIX")
-                    || (name == "MOAC - MOAC")
-                    || (name == "MUSIC - Musicoin")
-                    || (name == "POA - Poa")
-                    || (name == "EXP - Expanse")
-                    || (name == "CLO - Callisto")
-                    || (name == "DXN - DEXON")
-                    || (name == "ELLA - Ellaism")
-                    || (name == "ESN - Ethersocial Network")
-                    || (name == "VET - VeChain")
-                    || (name == "ERE - EtherCore")
-                    || (name == "BSC - Binance Smart Chain")
+            || (name == "ETC - Ethereum Classic")
+            || (name == "EWT - EnergyWeb")
+            || (name == "PIRL - Pirl")
+            || (name == "MIX - MIX")
+            || (name == "MOAC - MOAC")
+            || (name == "MUSIC - Musicoin")
+            || (name == "POA - Poa")
+            || (name == "EXP - Expanse")
+            || (name == "CLO - Callisto")
+            || (name == "DXN - DEXON")
+            || (name == "ELLA - Ellaism")
+            || (name == "ESN - Ethersocial Network")
+            || (name == "VET - VeChain")
+            || (name == "ERE - EtherCore")
+            || (name == "BSC - Binance Smart Chain")
     }
 
     function networkIsRsk() {
@@ -2136,8 +2241,13 @@
         else if (p2wpkhInP2shSelected()) {
             return "p2wpkhInP2sh" in n;
         }
-        // require both if it's unclear which params are required
         return "p2wpkh" in n && "p2wpkhInP2sh" in n;
+    }
+
+    // Note: DOM.bip100tab is the <a> element, so needs .parent() to get <li>
+    // All other tab references are the <li> element directly
+    function bip100TabSelected() {
+        return DOM.bip100tab.parent().hasClass("active");
     }
 
     function bip49TabSelected() {
@@ -2150,6 +2260,39 @@
 
     function bip141TabSelected() {
         return DOM.bip141tab.hasClass("active");
+    }
+
+    // Hide/show tabs for PQ mode
+    function setPQMode(enabled) {
+        if (enabled) {
+            // PQ mode: Show only BIP32 and BIP100
+            DOM.bip100tab.parent().removeClass("hidden"); // BIP100 tab (parent because DOM.bip100tab is <a>)
+            DOM.bip44tab.addClass("hidden");
+            DOM.bip49tab.addClass("hidden");
+            DOM.bip84tab.addClass("hidden");
+            DOM.bip141tab.addClass("hidden");
+        } else {
+            // Non-PQ mode: Hide BIP100, show standard tabs
+            DOM.bip100tab.parent().addClass("hidden"); // Hide BIP100
+            DOM.bip44tab.removeClass("hidden");
+            DOM.bip49tab.removeClass("hidden");
+            DOM.bip84tab.removeClass("hidden");
+            DOM.bip141tab.removeClass("hidden");
+        }
+    }
+
+    function displayBip100Info() {
+        // Purpose is readable, other fields writeable
+        // But for Neurai PQ we want purpose=100 and coin=1900 fixed?
+        // The HTML inputs are readonly for purpose and coin.
+        DOM.bip100purpose.val(100);
+        DOM.bip100coin.val(1900);
+        // DOM.bip100account.val(0); // Let user edit account
+        // DOM.bip100change.val(0); // Let user edit change
+        // Path is derived from these, but we also have a readonly path display
+        // Wait, calcForDerivationPath calls getDerivationPath which reads from DOM...
+        // so we don't need to force set values here if they are already in HTML default.
+        // But displayBip44Info does it.
     }
 
     function setHdCoin(coinValue) {
@@ -2205,14 +2348,14 @@
     function lastIndexInTable() {
         var pathText = DOM.addresses.find(".index").last().text();
         var pathBits = pathText.split("/");
-        var lastBit = pathBits[pathBits.length-1];
+        var lastBit = pathBits[pathBits.length - 1];
         var lastBitClean = lastBit.replace("'", "");
         return parseInt(lastBitClean);
     }
 
     function uint8ArrayToHex(a) {
         var s = ""
-        for (var i=0; i<a.length; i++) {
+        for (var i = 0; i < a.length; i++) {
             var h = a[i].toString(16);
             while (h.length < 2) {
                 h = "0" + h;
@@ -2227,7 +2370,7 @@
         var words = phraseToWordArray(phrase);
         var wordIndexes = [];
         var language = getLanguage();
-        for (var i=0; i<words.length; i++) {
+        for (var i = 0; i < words.length; i++) {
             var word = words[i];
             var wordIndex = WORDLISTS[language].indexOf(word);
             wordIndexes.push(wordIndex);
@@ -2243,7 +2386,7 @@
         var checksum = "";
         var binaryStr = "";
         var language = getLanguage();
-        for (var i=words.length-1; i>=0; i--) {
+        for (var i = words.length - 1; i >= 0; i--) {
             var word = words[i];
             var wordIndex = WORDLISTS[language].indexOf(word);
             var wordBinary = wordIndex.toString(2);
@@ -2268,10 +2411,10 @@
     function updateCsv() {
         var tableCsv = "path,address,public key,private key\n";
         var rows = DOM.addresses.find("tr");
-        for (var i=0; i<rows.length; i++) {
+        for (var i = 0; i < rows.length; i++) {
             var row = $(rows[i]);
             var cells = row.find("td");
-            for (var j=0; j<cells.length; j++) {
+            for (var j = 0; j < cells.length; j++) {
                 var cell = $(cells[j]);
                 if (!cell.children().hasClass("invisible")) {
                     tableCsv = tableCsv + cell.text();
@@ -2292,35 +2435,53 @@
     var networks = [
         {
             name: "BTC - Bitcoin",
-            onSelect: function() {
+            onSelect: function () {
                 network = libs.bitcoin.networks.bitcoin;
                 setHdCoin(0);
             },
         },
-         {
+        {
             name: "XNA - Neurai",
-            onSelect: function() {
+            onSelect: function () {
                 network = libs.bitcoin.networks.neurai;
                 setHdCoin(1900);
             },
         },
-          {
+        {
+            name: "XNA - Neurai PostQuantum",
+            onSelect: function () {
+                network = libs.bitcoin.networks.neurai_pq;
+                setHdCoin(1900);
+                DOM.bip100tab.click();
+                calculate();
+            },
+        },
+        {
             name: "XNA - Neurai Legacy",
-            onSelect: function() {
+            onSelect: function () {
                 network = libs.bitcoin.networks.neurai_legacy;
                 setHdCoin(0);
             },
         },
         {
             name: "XNA - Neurai Testnet",
-            onSelect: function() {
+            onSelect: function () {
                 network = libs.bitcoin.networks.neurai_testnet;
                 setHdCoin(1900);
             },
         },
         {
+            name: "XNA - Neurai PostQuantum Testnet",
+            onSelect: function () {
+                network = libs.bitcoin.networks.neurai_pq_testnet;
+                setHdCoin(1900);
+                DOM.bip100tab.click();
+                calculate();
+            },
+        },
+        {
             name: "XNA - Neurai-Legacy_Testnet",
-            onSelect: function() {
+            onSelect: function () {
                 network = libs.bitcoin.networks.neurai_testnet;
                 setHdCoin(0);
             },
@@ -2330,29 +2491,29 @@
     var clients = [
         {
             name: "Bitcoin Core",
-            onSelect: function() {
+            onSelect: function () {
                 DOM.bip32path.val("m/0'/0'");
                 DOM.hardenedAddresses.prop('checked', true);
             },
         },
         {
             name: "blockchain.info",
-            onSelect: function() {
+            onSelect: function () {
                 DOM.bip32path.val("m/44'/0'/0'");
                 DOM.hardenedAddresses.prop('checked', false);
             },
         },
         {
             name: "MultiBit HD",
-            onSelect: function() {
+            onSelect: function () {
                 DOM.bip32path.val("m/0'/0");
                 DOM.hardenedAddresses.prop('checked', false);
             },
         },
         {
             name: "Coinomi, Ledger",
-            onSelect: function() {
-                DOM.bip32path.val("m/44'/"+DOM.bip44coin.val()+"'/0'");
+            onSelect: function () {
+                DOM.bip32path.val("m/44'/" + DOM.bip44coin.val() + "'/0'");
                 DOM.hardenedAddresses.prop('checked', false);
             },
         }
@@ -2389,8 +2550,8 @@
         for (var i = 0; i < stripAddress.length; i++) {
             checksumAddress +=
                 parseInt(keccakHash[i], 16) >= 8 ?
-                stripAddress[i].toUpperCase() :
-                stripAddress[i];
+                    stripAddress[i].toUpperCase() :
+                    stripAddress[i];
         }
 
         return checksumAddress;
@@ -2447,6 +2608,81 @@
         };
     }
     // ELA - Elastos functions - end
+
+    // Bech32m Implementation for Neurai PQ
+    function bech32_polymod(values) {
+        var GENERATOR = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+        var chk = 1;
+        for (var p = 0; p < values.length; ++p) {
+            var top = chk >> 25;
+            chk = (chk & 0x1ffffff) << 5 ^ values[p];
+            for (var i = 0; i < 5; ++i) {
+                if ((top >> i) & 1) {
+                    chk ^= GENERATOR[i];
+                }
+            }
+        }
+        return chk;
+    }
+
+    function bech32_hrpExpand(hrp) {
+        var ret = [];
+        for (var i = 0; i < hrp.length; ++i) {
+            ret.push(hrp.charCodeAt(i) >> 5);
+        }
+        ret.push(0);
+        for (var i = 0; i < hrp.length; ++i) {
+            ret.push(hrp.charCodeAt(i) & 31);
+        }
+        return ret;
+    }
+
+    function bech32m_createChecksum(hrp, data) {
+        var values = bech32_hrpExpand(hrp).concat(data).concat([0, 0, 0, 0, 0, 0]);
+        var polymod = bech32_polymod(values) ^ 0x2bc830a3;
+        var ret = [];
+        for (var i = 0; i < 6; ++i) {
+            ret.push((polymod >> 5 * (5 - i)) & 31);
+        }
+        return ret;
+    }
+
+    function bech32m_encode(hrp, data) {
+        var combined = data.concat(bech32m_createChecksum(hrp, data));
+        var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+        var ret = hrp + "1";
+        for (var i = 0; i < combined.length; ++i) {
+            ret += CHARSET.charAt(combined[i]);
+        }
+        return ret;
+    }
+
+    function convertBits(data, fromBits, toBits, pad) {
+        var acc = 0;
+        var bits = 0;
+        var ret = [];
+        var maxv = (1 << toBits) - 1;
+        for (var p = 0; p < data.length; ++p) {
+            var value = data[p];
+            if (value < 0 || (value >> fromBits) !== 0) {
+                return null;
+            }
+            acc = (acc << fromBits) | value;
+            bits += fromBits;
+            while (bits >= toBits) {
+                bits -= toBits;
+                ret.push((acc >> bits) & maxv);
+            }
+        }
+        if (pad) {
+            if (bits > 0) {
+                ret.push((acc << (toBits - bits)) & maxv);
+            }
+        } else if (bits >= fromBits || ((acc << (toBits - bits)) & maxv)) {
+            return null;
+        }
+        return ret;
+    }
 
     init();
 

@@ -109,3 +109,9 @@ body {
 .text-weight-normal {
     font-weight: normal !important;
 }
+
+.pubkey span,
+.privkey span {
+    word-break: break-all;
+    white-space: normal;
+}

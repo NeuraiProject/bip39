@@ -1,0 +1,21 @@
+{
+  "name": "bip39",
+  "version": "1.0.0",
+  "description": "A tool for converting BIP39 mnemonic phrases to addresses and private keys.",
+  "main": "dilithium_node.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@noble/post-quantum": "^0.5.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.2"
+  }
+}
