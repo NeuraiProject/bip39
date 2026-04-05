@@ -1,3 +1,8 @@
+# 0.5.6.3
+
+* Changed BIP100 derivation path for Neurai PostQuantum Testnet to `m/100'/1900'/0'/1/index` (change index = 1)
+* Mainnet PostQuantum derivation path remains `m/100'/1900'/0'/0/index` (change index = 0)
+
 # 0.5.6.2
 
 * Implemented a new test script (test-derivation.mjs) to compare BIP39 seed generation, HD key derivation, and ML-DSA-44 key generation.
