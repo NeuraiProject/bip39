@@ -2452,6 +2452,7 @@
             onSelect: function () {
                 network = libs.bitcoin.networks.neurai_pq;
                 setHdCoin(1900);
+                DOM.bip100change.val(0);
                 DOM.bip100tab.click();
                 calculate();
             },
@@ -2475,6 +2476,7 @@
             onSelect: function () {
                 network = libs.bitcoin.networks.neurai_pq_testnet;
                 setHdCoin(1900);
+                DOM.bip100change.val(1);
                 DOM.bip100tab.click();
                 calculate();
             },
