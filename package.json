@@ -1,6 +1,6 @@
 {
   "name": "bip39",
-  "version": "1.0.0",
+  "version": "0.5.6.4",
   "description": "A tool for converting BIP39 mnemonic phrases to addresses and private keys.",
   "main": "dilithium_node.js",
   "directories": {

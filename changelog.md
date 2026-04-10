@@ -1,3 +1,10 @@
+# 0.5.6.4
+
+* Set Neurai Testnet legacy derivation path to `m/44'/1'/0'/0/index`
+* Set Neurai PostQuantum Testnet derivation path to `m/100'/1'/0'/0/index`
+* Remove `Neurai-Legacy_Testnet` from the network selector
+* Mainnet PostQuantum derivation path remains `m/100'/1900'/0'/0/index` (change index = 0)
+
 # 0.5.6.3
 
 * Changed BIP100 derivation path for Neurai PostQuantum Testnet to `m/100'/1900'/0'/1/index` (change index = 1)

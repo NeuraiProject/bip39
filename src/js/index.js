@@ -227,6 +227,7 @@
         var isPQNetwork = network.name.indexOf("PostQuantum") > -1;
         setPQMode(isPQNetwork);
         network.onSelect();
+        selectDefaultDerivationTab(isPQNetwork);
         adjustNetworkForSegwit();
         if (seed != null) {
             seedChanged()
@@ -2281,24 +2282,32 @@
         }
     }
 
+    function selectDefaultDerivationTab(isPQNetwork) {
+        if (isPQNetwork) {
+            DOM.bip100tab.tab("show");
+            return;
+        }
+        DOM.bip44tab.find("a").tab("show");
+    }
+
     function displayBip100Info() {
-        // Purpose is readable, other fields writeable
-        // But for Neurai PQ we want purpose=100 and coin=1900 fixed?
-        // The HTML inputs are readonly for purpose and coin.
+        // Purpose is readonly, account/change remain editable.
         DOM.bip100purpose.val(100);
-        DOM.bip100coin.val(1900);
-        // DOM.bip100account.val(0); // Let user edit account
-        // DOM.bip100change.val(0); // Let user edit change
-        // Path is derived from these, but we also have a readonly path display
-        // Wait, calcForDerivationPath calls getDerivationPath which reads from DOM...
-        // so we don't need to force set values here if they are already in HTML default.
-        // But displayBip44Info does it.
+        DOM.bip100coin.val(getBip100CoinForSelectedNetwork());
     }
 
     function setHdCoin(coinValue) {
         DOM.bip44coin.val(coinValue);
         DOM.bip49coin.val(coinValue);
         DOM.bip84coin.val(coinValue);
+    }
+
+    function getBip100CoinForSelectedNetwork() {
+        var name = networks[DOM.network.val()].name;
+        if (name == "XNA - Neurai PostQuantum Testnet") {
+            return 1;
+        }
+        return 1900;
     }
 
     function showSegwitAvailable() {
@@ -2448,16 +2457,6 @@
             },
         },
         {
-            name: "XNA - Neurai PostQuantum",
-            onSelect: function () {
-                network = libs.bitcoin.networks.neurai_pq;
-                setHdCoin(1900);
-                DOM.bip100change.val(0);
-                DOM.bip100tab.click();
-                calculate();
-            },
-        },
-        {
             name: "XNA - Neurai Legacy",
             onSelect: function () {
                 network = libs.bitcoin.networks.neurai_legacy;
@@ -2465,27 +2464,27 @@
             },
         },
         {
+            name: "XNA - Neurai PostQuantum",
+            onSelect: function () {
+                network = libs.bitcoin.networks.neurai_pq;
+                setHdCoin(1900);
+                DOM.bip100change.val(0);
+            },
+        },
+        {
             name: "XNA - Neurai Testnet",
             onSelect: function () {
                 network = libs.bitcoin.networks.neurai_testnet;
-                setHdCoin(1900);
+                setHdCoin(1);
             },
         },
         {
             name: "XNA - Neurai PostQuantum Testnet",
             onSelect: function () {
                 network = libs.bitcoin.networks.neurai_pq_testnet;
-                setHdCoin(1900);
-                DOM.bip100change.val(1);
-                DOM.bip100tab.click();
-                calculate();
-            },
-        },
-        {
-            name: "XNA - Neurai-Legacy_Testnet",
-            onSelect: function () {
-                network = libs.bitcoin.networks.neurai_testnet;
-                setHdCoin(0);
+                setHdCoin(1);
+                DOM.bip100coin.val(1);
+                DOM.bip100change.val(0);
             },
         }
     ]

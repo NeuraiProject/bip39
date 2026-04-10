@@ -10,6 +10,7 @@ Neurai uses specific parameters for its chain and Post-Quantum (PQ) cryptography
 * **Ticker**: XNA
 * **BIP44 Coin Type**: `1900`
 * **Legacy Derivation Path**: `m/44'/1900'/0'/0`
+* **Testnet Legacy Derivation Path**: `m/44'/1'/0'/0`
 
 ### Post-Quantum Cryptography (PQ)
 
@@ -17,6 +18,7 @@ Neurai integrates Post-Quantum cryptography for enhanced security.
 
 * **Algorithm**: ML-DSA-44 (Dilithium2)
 * **PQ Derivation Path**: `m/100'/1900'/0'/0`
+* **PQ Testnet Derivation Path**: `m/100'/1'/0'/0`
 * **Address Format**: Addresses starting with `nq1...` (Bech32)
 
 ## Online Version
