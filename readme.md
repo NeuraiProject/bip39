@@ -19,7 +19,8 @@ Neurai integrates Post-Quantum cryptography for enhanced security.
 * **Algorithm**: ML-DSA-44 (Dilithium2)
 * **PQ Derivation Path**: `m/100'/1900'/0'/0`
 * **PQ Testnet Derivation Path**: `m/100'/1'/0'/0`
-* **Address Format**: Addresses starting with `nq1...` (Bech32)
+* **Default PQ Address Template**: `auth_type=0x01`, `witnessScript=OP_TRUE`, commitment = `TaggedHash("NeuraiAuthScript", 0x01 || (0x01 || Hash160(0x05 || pq_pubkey)) || SHA256(OP_TRUE))`
+* **Address Format**: AuthScript witness v1 addresses with a 32-byte commitment. Mainnet addresses start with `nq1...` and testnet addresses start with `tnq1...` (Bech32m)
 
 ## Online Version
 

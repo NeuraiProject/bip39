@@ -1,6 +1,10 @@
 const crypto = require('crypto');
 const DilithiumAlgorithm = require('./dilithium_node.js');
 
+const isTestnet = process.argv.includes('--testnet') || process.argv.includes('testnet');
+const hrp = isTestnet ? 'tnq' : 'nq';
+const networkName = isTestnet ? 'testnet' : 'mainnet';
+
 // Bech32m Implementation (copied from index.js)
 function bech32_polymod(values) {
     var GENERATOR = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
@@ -41,8 +45,8 @@ function bech32m_createChecksum(hrp, data) {
 
 function bech32m_encode(hrp, data) {
     var combined = data.concat(bech32m_createChecksum(hrp, data));
-    var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-    var ret = hrp + "1";
+    var CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+    var ret = hrp + '1';
     for (var i = 0; i < combined.length; ++i) {
         ret += CHARSET.charAt(combined[i]);
     }
@@ -81,55 +85,59 @@ function hash160(buffer) {
     return crypto.createHash('ripemd160').update(sha).digest();
 }
 
-// MAIN VERIFICATION LOGIC
-console.log("Starting Neurai PQ Logic Verification...");
+function taggedHash(tag, msg) {
+    const tagHash = crypto.createHash('sha256').update(Buffer.from(tag, 'utf8')).digest();
+    return crypto.createHash('sha256').update(Buffer.concat([tagHash, tagHash, Buffer.from(msg)])).digest();
+}
+
+console.log(`Starting Neurai PQ Logic Verification (${networkName})...`);
 
 try {
-    // 1. Generate Seed (simulating BIP32 derivation)
     const seed = crypto.randomBytes(32);
-    console.log("\n[1] Derived Seed (32 bytes):");
+    console.log('\n[1] Derived Seed (32 bytes):');
     console.log(seed.toString('hex'));
 
-    // 2. Generate Dilithium Keypair
-    console.log("\n[2] Generating Dilithium2 Keypair...");
+    console.log('\n[2] Generating Dilithium2 Keypair...');
     var level2 = DilithiumAlgorithm.DilithiumLevel.get(2);
     var pqKeyPair = DilithiumAlgorithm.DilithiumKeyPair.generate(level2, new Uint8Array(seed));
 
-    // 3. Get Public Key
     var pubKeyBytes = pqKeyPair.getPublicKey().getBytes();
-    console.log("\n[3] Dilithium Public Key (first 64 bytes):");
-    console.log(Buffer.from(pubKeyBytes).slice(0, 64).toString('hex') + "...");
-    console.log("Total Length:", pubKeyBytes.length, "bytes");
+    console.log('\n[3] Dilithium Public Key (first 64 bytes):');
+    console.log(Buffer.from(pubKeyBytes).slice(0, 64).toString('hex') + '...');
+    console.log('Total Length:', pubKeyBytes.length, 'bytes');
 
-    // 4. Hash160 (SHA256 -> RIPEMD160)
-    var hash160Buffer = hash160(Buffer.from(pubKeyBytes));
-    console.log("\n[4] Hash160 of Public Key:");
-    console.log(hash160Buffer.toString('hex'));
+    // Match Neurai AuthScript default PQ address generation.
+    var pubKeyWithHeader = Buffer.concat([Buffer.from([0x05]), Buffer.from(pubKeyBytes)]);
+    var keyHashBuffer = hash160(pubKeyWithHeader);
+    console.log('\n[4] Hash160 of 0x05 || PQ Public Key:');
+    console.log(keyHashBuffer.toString('hex'));
 
-    // 5. Bech32m Encoding
-    // Convert buffer to array of numbers
-    var hash160Array = [];
-    for (var i = 0; i < hash160Buffer.length; i++) hash160Array.push(hash160Buffer[i]);
+    var witnessScript = Buffer.from([0x51]); // OP_TRUE
+    var witnessScriptHash = crypto.createHash('sha256').update(witnessScript).digest();
+    console.log('\n[5] SHA256(OP_TRUE):');
+    console.log(witnessScriptHash.toString('hex'));
 
-    // Convert 8-bit hash to 5-bit
-    var data5bit = convertBits(hash160Array, 8, 5, true);
+    var preimage = Buffer.concat([Buffer.from([0x01, 0x01]), keyHashBuffer, witnessScriptHash]);
+    var commitmentBuffer = taggedHash('NeuraiAuthScript', preimage);
+    console.log('\n[6] AuthScript commitment:');
+    console.log(commitmentBuffer.toString('hex'));
 
-    // Prepend witness version 1
+    var commitmentArray = [];
+    for (var i = 0; i < commitmentBuffer.length; i++) commitmentArray.push(commitmentBuffer[i]);
+
+    var data5bit = convertBits(commitmentArray, 8, 5, true);
     var version = [1];
     var data = version.concat(data5bit);
-
-    var hrp = "nq";
     var address = bech32m_encode(hrp, data);
 
-    console.log("\n[5] Generated Neurai PQ Address:");
+    console.log(`\n[7] Generated Neurai PQ ${networkName} Address:`);
     console.log(address);
 
-    if (address.startsWith("nq1p") || address.startsWith("nq1")) {
-        console.log("\nSUCCESS: Address format looks correct (starts with nq1)!");
+    if (address.startsWith(hrp + '1')) {
+        console.log(`\nSUCCESS: Address format looks correct (starts with ${hrp}1)!`);
     } else {
-        console.error("\nFAILURE: Address format incorrect.");
+        console.error('\nFAILURE: Address format incorrect.');
     }
-
 } catch (e) {
-    console.error("Verification Failed:", e);
+    console.error('Verification Failed:', e);
 }

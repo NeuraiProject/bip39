@@ -1429,10 +1429,7 @@
 
                 // Neurai PostQuantum (ML-DSA-44 / FIPS 204)
                 if (networks[DOM.network.val()].name.indexOf("Neurai PostQuantum") > -1) {
-                    var hrp = libs.bitcoin.networks.neurai_pq.bech32;
-                    if (networks[DOM.network.val()].name.indexOf("Testnet") > -1) {
-                        hrp = libs.bitcoin.networks.neurai_pq_testnet.bech32;
-                    }
+                    var hrp = network && network.bech32 ? network.bech32 : libs.bitcoin.networks.neurai_pq.bech32;
 
                     if (typeof ml_dsa44 !== 'undefined') {
                         try {
@@ -1457,37 +1454,80 @@
                             }
                             pubkey = pubKeyHex; // Override the ECDSA public key
 
-                            // Hash160 of Public Key for Witness V1 Address
-                            // In C++, we prepend 0x05 header before hashing
-                            // So we need to do the same here for compatibility
-                            var pubKeyWithHeader = new Uint8Array(pubKeyBytes.length + 1);
-                            pubKeyWithHeader[0] = 0x05; // PQ key header
-                            pubKeyWithHeader.set(pubKeyBytes, 1);
-
+                            // Neurai AuthScript v1 address (default PQ template):
+                            // commitment = TaggedHash("NeuraiAuthScript",
+                            //     0x01 || (0x01 || Hash160(0x05 || pq_pubkey)) || SHA256(OP_TRUE))
                             var SafeBuffer = seedBuffer.constructor;
                             var pubKeyBuf;
                             try {
                                 if (SafeBuffer.from) {
-                                    pubKeyBuf = SafeBuffer.from(pubKeyWithHeader);
+                                    pubKeyBuf = SafeBuffer.from(pubKeyBytes);
                                 } else {
-                                    pubKeyBuf = new SafeBuffer(pubKeyWithHeader);
+                                    pubKeyBuf = new SafeBuffer(pubKeyBytes);
                                 }
                             } catch (e) {
                                 console.error("Buffer creation failed", e);
-                                if (typeof Buffer !== 'undefined') pubKeyBuf = Buffer.from(pubKeyWithHeader);
-                                else pubKeyBuf = pubKeyWithHeader;
+                                if (typeof Buffer !== 'undefined') pubKeyBuf = Buffer.from(pubKeyBytes);
+                                else pubKeyBuf = pubKeyBytes;
                             }
 
-                            var hash160Buffer = libs.bitcoin.crypto.hash160(pubKeyBuf);
+                            var pubKeyWithHeaderBuf;
+                            try {
+                                if (SafeBuffer.from) {
+                                    pubKeyWithHeaderBuf = SafeBuffer.concat([SafeBuffer.from([0x05]), pubKeyBuf]);
+                                } else {
+                                    var pubKeyWithHeader = new Uint8Array(pubKeyBytes.length + 1);
+                                    pubKeyWithHeader[0] = 0x05;
+                                    pubKeyWithHeader.set(pubKeyBytes, 1);
+                                    pubKeyWithHeaderBuf = new SafeBuffer(pubKeyWithHeader);
+                                }
+                            } catch (e) {
+                                if (typeof Buffer !== 'undefined') pubKeyWithHeaderBuf = Buffer.concat([Buffer.from([0x05]), Buffer.from(pubKeyBytes)]);
+                                else throw e;
+                            }
 
-                            // Convert buffer to array
-                            var hash160 = [];
-                            for (var i = 0; i < hash160Buffer.length; i++) hash160.push(hash160Buffer[i]);
+                            var keyHashBuffer = libs.bitcoin.crypto.hash160(pubKeyWithHeaderBuf);
+                            var witnessScriptBuf;
+                            try {
+                                if (SafeBuffer.from) {
+                                    witnessScriptBuf = SafeBuffer.from([0x51]); // OP_TRUE
+                                } else {
+                                    witnessScriptBuf = new SafeBuffer([0x51]);
+                                }
+                            } catch (e) {
+                                if (typeof Buffer !== 'undefined') witnessScriptBuf = Buffer.from([0x51]);
+                                else witnessScriptBuf = [0x51];
+                            }
+                            var witnessScriptHash = libs.bitcoin.crypto.sha256(witnessScriptBuf);
 
-                            // Bech32m encode
-                            // First convert 8-bit hash to 5-bit
-                            var data5bit = convertBits(hash160, 8, 5, true);
-                            // Prepend witness version 1
+                            var preimage = [0x01, 0x01];
+                            for (var i = 0; i < keyHashBuffer.length; i++) preimage.push(keyHashBuffer[i]);
+                            for (var i = 0; i < witnessScriptHash.length; i++) preimage.push(witnessScriptHash[i]);
+
+                            var tagBytes;
+                            try {
+                                if (SafeBuffer.from) {
+                                    tagBytes = SafeBuffer.from('NeuraiAuthScript', 'utf8');
+                                } else {
+                                    tagBytes = new SafeBuffer('NeuraiAuthScript', 'utf8');
+                                }
+                            } catch (e) {
+                                if (typeof Buffer !== 'undefined') tagBytes = Buffer.from('NeuraiAuthScript', 'utf8');
+                                else throw e;
+                            }
+                            var tagHash = libs.bitcoin.crypto.sha256(tagBytes);
+
+                            var taggedPreimage = [];
+                            for (var i = 0; i < tagHash.length; i++) taggedPreimage.push(tagHash[i]);
+                            for (var i = 0; i < tagHash.length; i++) taggedPreimage.push(tagHash[i]);
+                            for (var i = 0; i < preimage.length; i++) taggedPreimage.push(preimage[i]);
+
+                            var commitmentBuffer = libs.bitcoin.crypto.sha256(SafeBuffer.from ? SafeBuffer.from(taggedPreimage) : new SafeBuffer(taggedPreimage));
+                            var commitment = [];
+                            for (var i = 0; i < commitmentBuffer.length; i++) commitment.push(commitmentBuffer[i]);
+
+                            // Bech32m encode witness version 1 + 32-byte commitment.
+                            var data5bit = convertBits(commitment, 8, 5, true);
                             var version = [1];
                             var data = version.concat(data5bit);
                             address = bech32m_encode(hrp, data);

@@ -1,3 +1,10 @@
+# 0.5.6.5
+
+* Update Neurai PostQuantum address generation to use the default AuthScript witness v1 commitment tagged with `NeuraiAuthScript`
+* Use the selected network Bech32 HRP for Neurai PostQuantum addresses so testnet outputs use `tnq1...`
+* Document the default PQ address template and the Bech32m mainnet/testnet formats in the README
+* Update `test-derivation.mjs` and `verify_pq.js` to validate the new PQ address derivation flow on both mainnet and testnet
+
 # 0.5.6.4
 
 * Set Neurai Testnet legacy derivation path to `m/44'/1'/0'/0/index`
