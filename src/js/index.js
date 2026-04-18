@@ -59,7 +59,12 @@
     DOM.generateContainer = $(".generate-container");
     DOM.generate = $(".generate");
     DOM.seed = $(".seed");
-    DOM.rootKey = $(".root-key");
+    DOM.rootKey                = $(".root-key");
+    DOM.rootKeyLabel           = $("#root-key-label");
+    DOM.extendedPrivKeyGroup   = $("#extended-priv-key-group");
+    DOM.extendedPubKeyGroup    = $("#extended-pub-key-group");
+    DOM.bip100AccountXprvGroup = $("#bip100-account-xprv-group");
+    DOM.bip100AccountXpubGroup = $("#bip100-account-xpub-group");
     DOM.litecoinLtubContainer = $(".litecoin-ltub-container");
     DOM.litecoinUseLtub = $(".litecoin-use-ltub");
     DOM.extendedPrivKey = $(".extended-priv-key");
@@ -882,6 +887,7 @@
     }
 
     function validateRootKey(rootKeyBase58) {
+        if (isPQNetwork()) return "";
         if (isGRS())
             return validateRootKeyGRS(rootKeyBase58);
 
@@ -1178,6 +1184,10 @@
         // Display the key
         DOM.seed.val(seed);
         var rootKey = bip32RootKey.toBase58();
+        if (isPQNetwork() && seed) {
+            try { rootKey = computeXpqpriv(seed, isTestnetPQ()); }
+            catch(e) { console.error("computeXpqpriv failed:", e); }
+        }
         DOM.rootKey.val(rootKey);
         var xprvkeyB58 = "NA";
         if (!bip32ExtendedKey.isNeutered()) {
@@ -1433,14 +1443,16 @@
 
                     if (typeof ml_dsa44 !== 'undefined') {
                         try {
-                            // Use the private key of the HD node as the deterministic seed
-                            // keyPair.d is the BigInteger private key from bitcoinjs
-                            var seedBuffer = keyPair.d.toBuffer(32);
-                            var seed = new Uint8Array(seedBuffer);
+                            // NIP-022: native PQ-HD derivation m_pq/purpose'/coin'/account'/change'/index'
+                            // Master key is domain-separated from EC tree via "Neurai PQ seed" HMAC key.
+                            var bip100Purpose = parseIntNoNaN(DOM.bip100purpose.val(), 100);
+                            var bip100Coin    = parseIntNoNaN(DOM.bip100coin.val(), 1900);
+                            var bip100Account = parseIntNoNaN(DOM.bip100account.val(), 0);
+                            var bip100Change  = parseIntNoNaN(DOM.bip100change.val(), 0);
+                            var pqSeed32 = nip022_derive(seed, bip100Purpose, bip100Coin, bip100Account, bip100Change, index);
 
-                            // Generate ML-DSA-44 (FIPS 204) KeyPair from seed
-                            // noble-post-quantum uses 32-byte seed for deterministic keygen
-                            var pqKeys = ml_dsa44.keygen(seed);
+                            // Generate ML-DSA-44 (FIPS 204) KeyPair from NIP-022 derived seed
+                            var pqKeys = ml_dsa44.keygen(pqSeed32);
 
                             // Get Public Key (1312 bytes for ML-DSA-44)
                             var pubKeyBytes = pqKeys.publicKey; // Uint8Array
@@ -1457,64 +1469,35 @@
                             // Neurai AuthScript v1 address (default PQ template):
                             // commitment = TaggedHash("NeuraiAuthScript",
                             //     0x01 || (0x01 || Hash160(0x05 || pq_pubkey)) || SHA256(OP_TRUE))
-                            var SafeBuffer = seedBuffer.constructor;
-                            var pubKeyBuf;
-                            try {
-                                if (SafeBuffer.from) {
-                                    pubKeyBuf = SafeBuffer.from(pubKeyBytes);
-                                } else {
-                                    pubKeyBuf = new SafeBuffer(pubKeyBytes);
-                                }
-                            } catch (e) {
-                                console.error("Buffer creation failed", e);
-                                if (typeof Buffer !== 'undefined') pubKeyBuf = Buffer.from(pubKeyBytes);
-                                else pubKeyBuf = pubKeyBytes;
-                            }
+                            var useNodeBuffer = (typeof Buffer !== 'undefined' && typeof Buffer.concat === 'function');
 
+                            // pubKeyBuf: wrap Uint8Array pubKeyBytes
+                            var pubKeyBuf = useNodeBuffer ? Buffer.from(pubKeyBytes) : new Uint8Array(pubKeyBytes);
+
+                            // prepend 0x05 header byte to pubKeyBuf
                             var pubKeyWithHeaderBuf;
-                            try {
-                                if (SafeBuffer.from) {
-                                    pubKeyWithHeaderBuf = SafeBuffer.concat([SafeBuffer.from([0x05]), pubKeyBuf]);
-                                } else {
-                                    var pubKeyWithHeader = new Uint8Array(pubKeyBytes.length + 1);
-                                    pubKeyWithHeader[0] = 0x05;
-                                    pubKeyWithHeader.set(pubKeyBytes, 1);
-                                    pubKeyWithHeaderBuf = new SafeBuffer(pubKeyWithHeader);
-                                }
-                            } catch (e) {
-                                if (typeof Buffer !== 'undefined') pubKeyWithHeaderBuf = Buffer.concat([Buffer.from([0x05]), Buffer.from(pubKeyBytes)]);
-                                else throw e;
+                            if (useNodeBuffer) {
+                                pubKeyWithHeaderBuf = Buffer.concat([Buffer.from([0x05]), pubKeyBuf]);
+                            } else {
+                                pubKeyWithHeaderBuf = new Uint8Array(1 + pubKeyBytes.length);
+                                pubKeyWithHeaderBuf[0] = 0x05;
+                                pubKeyWithHeaderBuf.set(pubKeyBytes, 1);
                             }
 
                             var keyHashBuffer = libs.bitcoin.crypto.hash160(pubKeyWithHeaderBuf);
-                            var witnessScriptBuf;
-                            try {
-                                if (SafeBuffer.from) {
-                                    witnessScriptBuf = SafeBuffer.from([0x51]); // OP_TRUE
-                                } else {
-                                    witnessScriptBuf = new SafeBuffer([0x51]);
-                                }
-                            } catch (e) {
-                                if (typeof Buffer !== 'undefined') witnessScriptBuf = Buffer.from([0x51]);
-                                else witnessScriptBuf = [0x51];
-                            }
+
+                            // OP_TRUE witness script
+                            var witnessScriptBuf = useNodeBuffer ? Buffer.from([0x51]) : new Uint8Array([0x51]);
                             var witnessScriptHash = libs.bitcoin.crypto.sha256(witnessScriptBuf);
 
                             var preimage = [0x01, 0x01];
                             for (var i = 0; i < keyHashBuffer.length; i++) preimage.push(keyHashBuffer[i]);
                             for (var i = 0; i < witnessScriptHash.length; i++) preimage.push(witnessScriptHash[i]);
 
-                            var tagBytes;
-                            try {
-                                if (SafeBuffer.from) {
-                                    tagBytes = SafeBuffer.from('NeuraiAuthScript', 'utf8');
-                                } else {
-                                    tagBytes = new SafeBuffer('NeuraiAuthScript', 'utf8');
-                                }
-                            } catch (e) {
-                                if (typeof Buffer !== 'undefined') tagBytes = Buffer.from('NeuraiAuthScript', 'utf8');
-                                else throw e;
-                            }
+                            // encode tag string to bytes (TextEncoder works in all modern browsers)
+                            var tagBytes = useNodeBuffer
+                                ? Buffer.from('NeuraiAuthScript', 'utf8')
+                                : new TextEncoder().encode('NeuraiAuthScript');
                             var tagHash = libs.bitcoin.crypto.sha256(tagBytes);
 
                             var taggedPreimage = [];
@@ -1522,7 +1505,9 @@
                             for (var i = 0; i < tagHash.length; i++) taggedPreimage.push(tagHash[i]);
                             for (var i = 0; i < preimage.length; i++) taggedPreimage.push(preimage[i]);
 
-                            var commitmentBuffer = libs.bitcoin.crypto.sha256(SafeBuffer.from ? SafeBuffer.from(taggedPreimage) : new SafeBuffer(taggedPreimage));
+                            var commitmentBuffer = libs.bitcoin.crypto.sha256(
+                                useNodeBuffer ? Buffer.from(taggedPreimage) : new Uint8Array(taggedPreimage)
+                            );
                             var commitment = [];
                             for (var i = 0; i < commitmentBuffer.length; i++) commitment.push(commitmentBuffer[i]);
 
@@ -1533,9 +1518,9 @@
                             address = bech32m_encode(hrp, data);
 
                             if (hasPrivkey) {
-                                var seedHex = seedBuffer.toString('hex');
-                                privkey = "ML-DSA-44 Seed: " + seedHex;
+                                privkey = "ML-DSA-44 Seed (NIP-022): " + nip022_bytesToHex(pqSeed32);
                             }
+                            indexText = "m_pq/" + bip100Purpose + "'/" + bip100Coin + "'/" + bip100Account + "'/" + bip100Change + "'/" + index + "'";
                         } catch (e) {
                             console.error(e);
                             address = "Error: " + e.message;
@@ -2303,22 +2288,139 @@
         return DOM.bip141tab.hasClass("active");
     }
 
+    // PQ network detection helpers
+    function isPQNetwork() {
+        return networks[DOM.network.val()].name.indexOf("Neurai PostQuantum") > -1;
+    }
+    function isTestnetPQ() {
+        return networks[DOM.network.val()].name.indexOf("Testnet") > -1;
+    }
+
+    // Base58Check encode (version bytes already included in payloadBytes)
+    function base58check_encode(payloadBytes) {
+        var buf = Buffer.from(payloadBytes);
+        var h1  = libs.bitcoin.crypto.sha256(buf);
+        var h2  = libs.bitcoin.crypto.sha256(h1);
+        var full = new Uint8Array(payloadBytes.length + 4);
+        full.set(payloadBytes);
+        for (var i = 0; i < 4; i++) full[payloadBytes.length + i] = h2[i];
+        var BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+        return libs.basex(BASE58).encode(Buffer.from(full));
+    }
+
+    // Compute xpqpriv: Base58Check(version || master CExtKeyPQ 73 bytes)
+    // Layout: version(4) + depth(1=0) + fingerprint(4=0) + child_index(4=0) + cc(32) + pq_seed(32) = 77 bytes
+    function computeXpqpriv(seedHex, testnet) {
+        var master  = nip022_master(seedHex);
+        var VERSION = testnet ? [0x04, 0x35, 0x9E, 0xC0] : [0x04, 0x88, 0x2C, 0xA0];
+        var payload = new Uint8Array(77);
+        payload.set(VERSION, 0);
+        // bytes 4-12 = 0 (depth, fingerprint, child_index all zero for master)
+        payload.set(master.cc,      13);
+        payload.set(master.pq_seed, 45);
+        return base58check_encode(payload);
+    }
+
+    // NIP-022: Native PQ-HD derivation helpers (CExtKeyPQ / CKDer_PQ)
+    // Master: HMAC-SHA512("Neurai PQ seed", bip39_seed_hex)
+    // Child:  HMAC-SHA512(cc_parent, 0x00 || pq_seed_parent || ser32(index))
+    // All derivation levels are hardened (index >= 0x80000000).
+
+    function nip022_hmacSha512(keyBits, dataBits) {
+        var hmac = new sjcl.misc.hmac(keyBits, sjcl.hash.sha512);
+        return hmac.mac(dataBits);
+    }
+
+    function nip022_hexToBytes(hex) {
+        var arr = new Uint8Array(hex.length / 2);
+        for (var i = 0; i < arr.length; i++) {
+            arr[i] = parseInt(hex.substr(i * 2, 2), 16);
+        }
+        return arr;
+    }
+
+    function nip022_bytesToHex(arr) {
+        var hex = '';
+        for (var i = 0; i < arr.length; i++) {
+            hex += ('0' + arr[i].toString(16)).slice(-2);
+        }
+        return hex;
+    }
+
+    function nip022_master(seedHex) {
+        var keyBits  = sjcl.codec.utf8String.toBits("Neurai PQ seed");
+        var dataBits = sjcl.codec.hex.toBits(seedHex);
+        var outBits  = nip022_hmacSha512(keyBits, dataBits);
+        var outHex   = sjcl.codec.hex.fromBits(outBits);
+        return {
+            pq_seed: nip022_hexToBytes(outHex.slice(0, 64)),
+            cc:      nip022_hexToBytes(outHex.slice(64, 128))
+        };
+    }
+
+    function nip022_ckder_pq(parent, index) {
+        if ((index >>> 0) < 0x80000000) {
+            throw new Error("NIP-022: only hardened derivation allowed");
+        }
+        var data = new Uint8Array(37);
+        data[0] = 0x00;
+        data.set(parent.pq_seed, 1);
+        data[33] = (index >>> 24) & 0xFF;
+        data[34] = (index >>> 16) & 0xFF;
+        data[35] = (index >>>  8) & 0xFF;
+        data[36] = (index       ) & 0xFF;
+        var keyBits  = sjcl.codec.hex.toBits(nip022_bytesToHex(parent.cc));
+        var dataBits = sjcl.codec.hex.toBits(nip022_bytesToHex(data));
+        var outBits  = nip022_hmacSha512(keyBits, dataBits);
+        var outHex   = sjcl.codec.hex.fromBits(outBits);
+        return {
+            pq_seed: nip022_hexToBytes(outHex.slice(0, 64)),
+            cc:      nip022_hexToBytes(outHex.slice(64, 128))
+        };
+    }
+
+    // Derives the leaf pq_seed for path m_pq/purpose'/coin'/account'/change'/leafIndex'
+    function nip022_derive(seedHex, purpose, coin, account, change, leafIndex) {
+        var H = 0x80000000;
+        var node = nip022_master(seedHex);
+        node = nip022_ckder_pq(node, (purpose    + H) >>> 0);
+        node = nip022_ckder_pq(node, (coin       + H) >>> 0);
+        node = nip022_ckder_pq(node, (account    + H) >>> 0);
+        node = nip022_ckder_pq(node, (change     + H) >>> 0);
+        node = nip022_ckder_pq(node, (leafIndex  + H) >>> 0);
+        return node.pq_seed;
+    }
+
     // Hide/show tabs for PQ mode
     function setPQMode(enabled) {
         if (enabled) {
             // PQ mode: Show only BIP32 and BIP100
-            DOM.bip100tab.parent().removeClass("hidden"); // BIP100 tab (parent because DOM.bip100tab is <a>)
+            DOM.bip100tab.parent().removeClass("hidden");
             DOM.bip44tab.addClass("hidden");
             DOM.bip49tab.addClass("hidden");
             DOM.bip84tab.addClass("hidden");
             DOM.bip141tab.addClass("hidden");
+            // Ocultar campos EC que no aplican a PQ
+            DOM.extendedPrivKeyGroup.addClass("hidden");
+            DOM.extendedPubKeyGroup.addClass("hidden");
+            DOM.bip100AccountXprvGroup.addClass("hidden");
+            DOM.bip100AccountXpubGroup.addClass("hidden");
+            // Cambiar label del campo root key
+            DOM.rootKeyLabel.text("PQ Root Key (xpqpriv)");
         } else {
             // Non-PQ mode: Hide BIP100, show standard tabs
-            DOM.bip100tab.parent().addClass("hidden"); // Hide BIP100
+            DOM.bip100tab.parent().addClass("hidden");
             DOM.bip44tab.removeClass("hidden");
             DOM.bip49tab.removeClass("hidden");
             DOM.bip84tab.removeClass("hidden");
             DOM.bip141tab.removeClass("hidden");
+            // Restaurar campos EC
+            DOM.extendedPrivKeyGroup.removeClass("hidden");
+            DOM.extendedPubKeyGroup.removeClass("hidden");
+            DOM.bip100AccountXprvGroup.removeClass("hidden");
+            DOM.bip100AccountXpubGroup.removeClass("hidden");
+            // Restaurar label
+            DOM.rootKeyLabel.text("BIP32 Root Key");
         }
     }
 

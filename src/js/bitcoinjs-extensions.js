@@ -1937,8 +1937,8 @@ libs.bitcoin.networks.neurai_pq = {
 libs.bitcoin.networks.neurai_pq_testnet = {
   messagePrefix: '\x18Neurai PQ Signed Message:\n',
   bip32: {
-    public: 0x04358394,
-    private: 0x043587cf,
+    public: 0x043587cf,
+    private: 0x04358394,
   },
   pubKeyHash: 0x7f,
   scriptHash: 0x75,
@@ -1949,8 +1949,8 @@ libs.bitcoin.networks.neurai_pq_testnet = {
 libs.bitcoin.networks.neurai_testnet = {
   messagePrefix: '\x18Neurai Signed Message:\n',
   bip32: {
-    public: 0x04358394,
-    private: 0x043587cf,
+    public: 0x043587cf,
+    private: 0x04358394,
   },
   pubKeyHash: 0x7f,
   scriptHash: 0x75,

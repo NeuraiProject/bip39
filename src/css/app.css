@@ -110,6 +110,7 @@ body {
     font-weight: normal !important;
 }
 
+.address span,
 .pubkey span,
 .privkey span {
     word-break: break-all;

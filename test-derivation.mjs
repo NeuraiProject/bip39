@@ -1,17 +1,24 @@
-// Test to compare derivation between JS and C++
+// Test to compare NIP-022 PQ-HD derivation between JS and C++
+// Implements CKDer_PQ: HMAC-SHA512("Neurai PQ seed", bip39_seed) for master,
+// then HMAC-SHA512(cc_parent, 0x00 || pq_seed_parent || ser32(index)) for each child.
+// All derivation levels are hardened (index >= 0x80000000).
 import { ml_dsa44 } from '@noble/post-quantum/ml-dsa.js';
-import { createHash, pbkdf2Sync } from 'crypto';
-import { HDKey } from '@scure/bip32';
+import { createHash, createHmac, pbkdf2Sync } from 'crypto';
 
 const isTestnet = process.argv.includes('--testnet') || process.argv.includes('testnet');
 const networkName = isTestnet ? 'testnet' : 'mainnet';
 const hrp = isTestnet ? 'tnq' : 'nq';
-const path = isTestnet ? "m/100'/1'/0'/0/0" : "m/100'/1900'/0'/0/0";
+const PQ_PURPOSE   = 100;
+const PQ_COIN_TYPE = isTestnet ? 1 : 1900;
+const PQ_ACCOUNT   = 0;
+const PQ_CHANGE    = 0;
+const PQ_INDEX     = 0;
+const path = `m_pq/${PQ_PURPOSE}'/${PQ_COIN_TYPE}'/${PQ_ACCOUNT}'/${PQ_CHANGE}'/${PQ_INDEX}'`;
 
 const mnemonic = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const passphrase = '';
 
-console.log(`=== BIP39 Derivation Test (${networkName}) ===\n`);
+console.log(`=== NIP-022 PQ-HD Derivation Test (${networkName}) ===\n`);
 console.log('Mnemonic:', mnemonic);
 console.log('Passphrase:', passphrase || '(empty)');
 console.log('Network:', networkName);
@@ -22,16 +29,44 @@ const salt = 'mnemonic' + passphrase;
 const seed = pbkdf2Sync(mnemonic, salt, 2048, 64, 'sha512');
 console.log('\n1. BIP39 Seed (64 bytes):', seed.toString('hex'));
 
-const masterKey = HDKey.fromMasterSeed(seed);
-console.log('\n2. Master Key:');
-console.log('   Private key:', Buffer.from(masterKey.privateKey).toString('hex'));
-console.log('   Chain code:', Buffer.from(masterKey.chainCode).toString('hex'));
+// NIP-022 master: HMAC-SHA512("Neurai PQ seed", bip39_seed)
+function nip022Master(bip39Seed) {
+    const out = createHmac('sha512', 'Neurai PQ seed').update(bip39Seed).digest();
+    return { pq_seed: out.slice(0, 32), cc: out.slice(32, 64) };
+}
 
-const derived = masterKey.derive(path);
-console.log('\n3. Derived key at', path + ':');
-console.log('   Private key (32 bytes):', Buffer.from(derived.privateKey).toString('hex'));
+// CKDer_PQ: HMAC-SHA512(cc_parent, 0x00 || pq_seed_parent || ser32(index))
+function nip022CkderPQ(parent, index) {
+    if (index < 0x80000000) throw new Error('NIP-022: only hardened derivation');
+    const data = Buffer.alloc(37);
+    data[0] = 0x00;
+    parent.pq_seed.copy(data, 1);
+    data.writeUInt32BE(index, 33);
+    const out = createHmac('sha512', parent.cc).update(data).digest();
+    return { pq_seed: out.slice(0, 32), cc: out.slice(32, 64) };
+}
 
-const pqSeed = new Uint8Array(derived.privateKey);
+function nip022Derive(bip39Seed, purpose, coin, account, change, leafIndex) {
+    const H = 0x80000000;
+    let node = nip022Master(bip39Seed);
+    node = nip022CkderPQ(node, (purpose    + H) >>> 0);
+    node = nip022CkderPQ(node, (coin       + H) >>> 0);
+    node = nip022CkderPQ(node, (account    + H) >>> 0);
+    node = nip022CkderPQ(node, (change     + H) >>> 0);
+    node = nip022CkderPQ(node, (leafIndex  + H) >>> 0);
+    return node.pq_seed;
+}
+
+const masterNode = nip022Master(seed);
+console.log('\n2. NIP-022 Master (HMAC-SHA512("Neurai PQ seed", bip39_seed)):');
+console.log('   pq_seed:', masterNode.pq_seed.toString('hex'));
+console.log('   chaincode:', masterNode.cc.toString('hex'));
+
+const pqSeedBuf = nip022Derive(seed, PQ_PURPOSE, PQ_COIN_TYPE, PQ_ACCOUNT, PQ_CHANGE, PQ_INDEX);
+console.log('\n3. Derived leaf at', path + ':');
+console.log('   pq_seed (32 bytes):', pqSeedBuf.toString('hex'));
+
+const pqSeed = new Uint8Array(pqSeedBuf);
 const pqKeys = ml_dsa44.keygen(pqSeed);
 console.log('\n4. ML-DSA-44 Keys:');
 console.log('   Public key length:', pqKeys.publicKey.length, 'bytes');
