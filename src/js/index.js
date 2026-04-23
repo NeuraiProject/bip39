@@ -2308,16 +2308,19 @@
         return libs.basex(BASE58).encode(Buffer.from(full));
     }
 
-    // Compute xpqpriv: Base58Check(version || master CExtKeyPQ 73 bytes)
-    // Layout: version(4) + depth(1=0) + fingerprint(4=0) + child_index(4=0) + cc(32) + pq_seed(32) = 77 bytes
+    // Compute xpqpriv: Base58Check(version || master CExtKeyPQ 74 bytes)
+    // Layout: version(4) + depth(1=0) + fingerprint(4=0) + child_index(4=0) + cc(32) + padding(1=0x00) + pq_seed(32) = 78 bytes
+    // The padding byte aligns the layout with BIP32 xprv so base58check yields
+    // "xpqp..." (mainnet) / "tpqp..." (testnet) prefixes.
     function computeXpqpriv(seedHex, testnet) {
         var master  = nip022_master(seedHex);
-        var VERSION = testnet ? [0x04, 0x35, 0x9E, 0xC0] : [0x04, 0x88, 0x2C, 0xA0];
-        var payload = new Uint8Array(77);
+        var VERSION = testnet ? [0x04, 0x35, 0x81, 0xD5] : [0x04, 0x88, 0xAC, 0x24];
+        var payload = new Uint8Array(78);
         payload.set(VERSION, 0);
         // bytes 4-12 = 0 (depth, fingerprint, child_index all zero for master)
         payload.set(master.cc,      13);
-        payload.set(master.pq_seed, 45);
+        // payload[45] = 0x00 (padding byte, already zero by default)
+        payload.set(master.pq_seed, 46);
         return base58check_encode(payload);
     }
 

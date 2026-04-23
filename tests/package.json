@@ -1,6 +1,6 @@
 {
   "name": "tests",
-  "version": "0.5.6.5",
+  "version": "0.5.6.7",
   "scripts": {
     "test": "jasmine spec/tests.js"
   },

@@ -1,4 +1,4 @@
-# 0.5.6.5
+# 0.5.6.7
 
 * Update Neurai PostQuantum address generation to use the default AuthScript witness v1 commitment tagged with `NeuraiAuthScript`
 * Use the selected network Bech32 HRP for Neurai PostQuantum addresses so testnet outputs use `tnq1...`

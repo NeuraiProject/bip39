@@ -152,4 +152,29 @@ const witnessVersion = 1;
 const address = bech32mEncode(hrp, [witnessVersion, ...data5bit]);
 
 console.log(`\n8. Final PQ ${networkName} Address:`, address);
+
+// 9. xpqpriv / tpqpriv master extended key (74-byte padded layout)
+const VERSION_MAIN = Buffer.from([0x04, 0x88, 0xAC, 0x24]); // xpqp...
+const VERSION_TEST = Buffer.from([0x04, 0x35, 0x81, 0xD5]); // tpqp...
+const extVersion = isTestnet ? VERSION_TEST : VERSION_MAIN;
+const extPayload = Buffer.alloc(78);
+extVersion.copy(extPayload, 0);
+masterNode.cc.copy(extPayload, 13);
+// extPayload[45] = 0x00 padding (already zero)
+masterNode.pq_seed.copy(extPayload, 46);
+const extChk = createHash('sha256').update(createHash('sha256').update(extPayload).digest()).digest().slice(0, 4);
+const extFull = Buffer.concat([extPayload, extChk]);
+const B58A = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function base58(buf) {
+    let n = 0n;
+    for (const b of buf) n = n * 256n + BigInt(b);
+    let s = '';
+    while (n > 0n) { s = B58A[Number(n % 58n)] + s; n /= 58n; }
+    for (const b of buf) { if (b === 0) s = '1' + s; else break; }
+    return s;
+}
+const extKey = base58(extFull);
+console.log(`\n9. Master extended PQ private key (${isTestnet ? 'tpqpriv' : 'xpqpriv'}):`);
+console.log('  ', extKey);
+
 console.log('\n=== Use these values to compare with C++ output ===');
